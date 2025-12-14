@@ -155,7 +155,29 @@ const StageDirector: React.FC<Props> = ({ project, updateProject }) => {
     // For Sora-2, enhance prompt with detailed requirements
     let videoPrompt = shot.actionSummary;
     if (selectedModel === 'sora-2') {
-      videoPrompt = `${shot.actionSummary}\n\n技术要求：\n- 画面比例：16:9横屏宽屏格式\n- 运镜方式：${shot.cameraMovement}\n- 画面风格：电影级质感，自然流畅的动作过渡\n- 细节要求：保持角色和场景的一致性，避免突兀变形\n- 光影要求：稳定的光照条件，自然的明暗对比`;
+      // 当有结束帧时，明确指示要实现帧间过渡
+      if (endImageUrl) {
+        videoPrompt = `Generate a smooth transition video from the first image (start frame) to the second image (end frame).
+
+Action Description: ${shot.actionSummary}
+
+Technical Requirements:
+- CRITICAL: The video MUST begin with the exact composition of the first image and gradually transition to end with the exact composition of the second image
+- Aspect Ratio: 16:9 widescreen landscape format
+- Camera Movement: ${shot.cameraMovement}
+- Transition: Ensure natural and fluid motion between start and end frames, avoid jumps or discontinuities
+- Visual Style: Cinematic quality with consistent lighting and color tone throughout
+- Details: Maintain character and scene continuity and consistency between both frames`;
+      } else {
+        videoPrompt = `${shot.actionSummary}
+
+Technical Requirements:
+- Aspect Ratio: 16:9 widescreen landscape format
+- Camera Movement: ${shot.cameraMovement}
+- Visual Style: Cinematic quality with natural and fluid motion
+- Details: Maintain character and scene consistency, avoid abrupt deformations
+- Lighting: Stable lighting conditions with natural contrast`;
+      }
     }
     
     const intervalId = shot.interval?.id || `int-${shot.id}-${Date.now()}`;
@@ -662,6 +684,12 @@ const StageDirector: React.FC<Props> = ({ project, updateProject }) => {
                            {!endKf?.imageUrl && (
                                <div className="text-[9px] text-zinc-500 text-center font-mono">
                                   * 未检测到结束帧，将使用单图生成模式 (Image-to-Video)
+                               </div>
+                           )}
+                           {endKf?.imageUrl && selectedModel === 'sora-2' && (
+                               <div className="text-[9px] text-green-500 text-center font-mono flex items-center justify-center gap-1">
+                                  <span className="w-1 h-1 rounded-full bg-green-500 animate-pulse"></span>
+                                  已启用双帧过渡模式 (Start → End Transition)
                                </div>
                            )}
                        </div>
