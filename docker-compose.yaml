@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: bigbanana-ai-app
     ports:
-      - "3000:80"
+      - "3005:80"
     environment:
       # 如果需要 API Key,可以在这里配置或使用 .env 文件
       # - ANTSK_API_KEY=${ANTSK_API_KEY}
