@@ -29,6 +29,9 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # 复制 favicon.ico 到 nginx 目录
 COPY --from=builder /app/favicon.ico /usr/share/nginx/html/
 
+# 复制 qrcode.png 到 nginx 目录
+COPY --from=builder /app/qrcode.png /usr/share/nginx/html/
+
 # 暴露 80 端口
 EXPOSE 80
 
