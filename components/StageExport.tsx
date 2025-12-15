@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Film, Download, Share2, FileVideo, Layers, Clock, CheckCircle, BarChart3, Loader2 } from 'lucide-react';
 import { ProjectState } from '../types';
-import { downloadMasterVideo } from '../services/exportService';
+import { downloadMasterVideo, downloadSourceAssets } from '../services/exportService';
 
 interface Props {
   project: ProjectState;
@@ -19,6 +19,11 @@ const StageExport: React.FC<Props> = ({ project }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadPhase, setDownloadPhase] = useState('');
   const [downloadProgress, setDownloadProgress] = useState(0);
+
+  // Source Assets Download state
+  const [isDownloadingAssets, setIsDownloadingAssets] = useState(false);
+  const [assetsPhase, setAssetsPhase] = useState('');
+  const [assetsProgress, setAssetsProgress] = useState(0);
 
   // Handle master video download
   const handleDownloadMaster = async () => {
@@ -45,6 +50,45 @@ const StageExport: React.FC<Props> = ({ project }) => {
       setIsDownloading(false);
       setDownloadPhase('');
       setDownloadProgress(0);
+    }
+  };
+
+  // Handle source assets download
+  const handleDownloadAssets = async () => {
+    if (isDownloadingAssets) return;
+    
+    // 检查是否有任何可下载的资源
+    const hasAssets = 
+      (project.scriptData?.characters.some(c => c.referenceImage || c.variations?.some(v => v.referenceImage))) ||
+      (project.scriptData?.scenes.some(s => s.referenceImage)) ||
+      (project.shots.some(s => s.keyframes?.some(k => k.imageUrl) || s.interval?.videoUrl));
+    
+    if (!hasAssets) {
+      alert('没有可下载的资源。请先生成角色、场景或镜头素材。');
+      return;
+    }
+    
+    setIsDownloadingAssets(true);
+    setAssetsProgress(0);
+    
+    try {
+      await downloadSourceAssets(project, (phase, prog) => {
+        setAssetsPhase(phase);
+        setAssetsProgress(prog);
+      });
+      
+      // Reset after successful download
+      setTimeout(() => {
+        setIsDownloadingAssets(false);
+        setAssetsPhase('');
+        setAssetsProgress(0);
+      }, 2000);
+    } catch (error) {
+      console.error('Assets download failed:', error);
+      alert(`下载源资源失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      setIsDownloadingAssets(false);
+      setAssetsPhase('');
+      setAssetsProgress(0);
     }
   };
 
@@ -182,8 +226,26 @@ const StageExport: React.FC<Props> = ({ project }) => {
 
           {/* Secondary Options */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-5 bg-[#141414] border border-zinc-800 rounded-xl hover:border-zinc-600 transition-colors group cursor-pointer flex flex-col justify-between h-32">
-                  <Layers className="w-5 h-5 text-zinc-600 group-hover:text-indigo-400 mb-4 transition-colors" />
+              <div 
+                  onClick={handleDownloadAssets}
+                  className={`p-5 bg-[#141414] border rounded-xl transition-all flex flex-col justify-between h-32 relative overflow-hidden ${
+                    isDownloadingAssets 
+                      ? 'border-indigo-500 cursor-wait' 
+                      : 'border-zinc-800 hover:border-zinc-600 group cursor-pointer'
+                  }`}
+              >
+                  {isDownloadingAssets && (
+                    <div className="absolute inset-0 bg-indigo-600/20 backdrop-blur-sm flex flex-col items-center justify-center z-10">
+                      <Loader2 className="w-6 h-6 text-indigo-400 animate-spin mb-2" />
+                      <p className="text-xs text-white font-mono">{assetsPhase}</p>
+                      <div className="w-32 h-1 bg-zinc-800 rounded-full overflow-hidden mt-2">
+                        <div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${assetsProgress}%` }}></div>
+                      </div>
+                    </div>
+                  )}
+                  <Layers className={`w-5 h-5 mb-4 transition-colors ${
+                    isDownloadingAssets ? 'text-indigo-400' : 'text-zinc-600 group-hover:text-indigo-400'
+                  }`} />
                   <div>
                     <h4 className="text-sm font-bold text-white mb-1">Source Assets</h4>
                     <p className="text-[10px] text-zinc-500">Download all generated images and raw video clips.</p>
