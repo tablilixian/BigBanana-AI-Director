@@ -22,6 +22,9 @@ const StageDirector: React.FC<Props> = ({ project, updateProject }) => {
   const startKf = activeShot?.keyframes?.find(k => k.type === 'start');
   const endKf = activeShot?.keyframes?.find(k => k.type === 'end');
 
+    // Selected video model for current shot (used by render logic)
+    const selectedModel = activeShot?.videoModel || 'sora-2';
+
   // Check if all start frames are generated
   const allStartFramesGenerated = project.shots.length > 0 && project.shots.every(s => s.keyframes?.find(k => k.type === 'start')?.imageUrl);
 
@@ -72,7 +75,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject }) => {
     let prompt = existingKf?.visualPrompt || shot.actionSummary;
     
     // 为 sora-2 优化 prompt：增加构图、光影、细节描述
-    const selectedModel = shot.videoModel || 'veo_3_1_i2v_s_fast_fl_landscape';
+        const selectedModel = shot.videoModel || 'sora-2';
     if (selectedModel === 'sora-2') {
       prompt = `${prompt}\n\n画面要求：高清晰度，电影级构图，16:9横屏宽屏格式。注重光影层次、色彩饱和度和景深效果。确保主体清晰、背景自然过渡。`;
     }
@@ -150,7 +153,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject }) => {
     let endImageUrl = eKf?.imageUrl;
     
     // Use selected model or default to Veo
-    const selectedModel = shot.videoModel || 'veo_3_1_i2v_s_fast_fl_landscape';
+    const selectedModel = shot.videoModel || 'sora-2';
     
     // For Sora-2, enhance prompt with detailed requirements
     let videoPrompt = shot.actionSummary;
