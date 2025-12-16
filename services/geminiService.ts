@@ -12,11 +12,19 @@ export class ApiKeyError extends Error {
 // Module-level variable to store the key at runtime
 let runtimeApiKey: string = process.env.API_KEY || "";
 
+/**
+ * 设置全局API密钥
+ * @param key - API密钥字符串
+ */
 export const setGlobalApiKey = (key: string) => {
   runtimeApiKey = key;
 };
 
-// Helper to check API key is available
+/**
+ * 检查API密钥是否可用
+ * @returns 返回运行时API密钥
+ * @throws {ApiKeyError} 如果API密钥缺失则抛出错误
+ */
 const checkApiKey = () => {
   if (!runtimeApiKey) throw new ApiKeyError("API Key missing. Please configure your antsk API Key.");
   return runtimeApiKey;
@@ -70,7 +78,14 @@ export const verifyApiKey = async (key: string): Promise<{ success: boolean; mes
   }
 };
 
-// Helper for retry logic on 429 errors
+/**
+ * 重试操作辅助函数，用于处理429限流错误
+ * @param operation - 要执行的异步操作函数
+ * @param maxRetries - 最大重试次数，默认3次
+ * @param baseDelay - 基础延迟时间（毫秒），默认2000ms，采用指数退避策略
+ * @returns 返回操作结果
+ * @throws 如果所有重试都失败，则抛出最后一次的错误
+ */
 const retryOperation = async <T>(operation: () => Promise<T>, maxRetries: number = 3, baseDelay: number = 2000): Promise<T> => {
   let lastError;
   for (let i = 0; i < maxRetries; i++) {
@@ -91,7 +106,11 @@ const retryOperation = async <T>(operation: () => Promise<T>, maxRetries: number
   throw lastError;
 };
 
-// Helper to clean JSON string from Markdown fences or accidental text
+/**
+ * 清理JSON字符串，移除Markdown代码块标记
+ * @param str - 原始字符串
+ * @returns 清理后的JSON字符串
+ */
 const cleanJsonString = (str: string): string => {
   if (!str) return "{}";
   // Remove ```json ... ``` or ``` ... ```
@@ -99,7 +118,15 @@ const cleanJsonString = (str: string): string => {
   return cleaned.trim();
 };
 
-// antsk chat completion API call
+/**
+ * 调用antsk聊天完成API
+ * @param prompt - 提示词内容
+ * @param model - 使用的模型名称，默认'gpt-5.1'
+ * @param temperature - 温度参数，控制随机性，默认0.7
+ * @param maxTokens - 最大生成token数，默认8192
+ * @returns 返回AI生成的文本内容
+ * @throws 如果API调用失败则抛出错误
+ */
 const chatCompletion = async (prompt: string, model: string = 'gpt-5.1', temperature: number = 0.7, maxTokens: number = 8192): Promise<string> => {
   const apiKey = checkApiKey();
   
@@ -260,6 +287,14 @@ export const parseScriptToData = async (rawText: string, language: string = '中
   }
 };
 
+/**
+ * 生成分镜列表
+ * 根据剧本数据和目标时长，为每个场景生成适量的分镜头
+ * 算法：目标时长(秒) ÷ 10秒/镜头 = 总镜头数，然后平均分配到各场景
+ * @param scriptData - 剧本数据，包含场景、角色、目标时长等信息
+ * @param model - 使用的AI模型，默认'gpt-5.1'
+ * @returns 返回分镜头列表，每个镜头包含关键帧、镜头运动等信息
+ */
 export const generateShotList = async (scriptData: ScriptData, model: string = 'gpt-5.1'): Promise<Shot[]> => {
   console.log('🎬 generateShotList 调用 - 使用模型:', model, '视觉风格:', scriptData.visualStyle);
   const overallStartTime = Date.now();
@@ -428,6 +463,16 @@ const VISUAL_STYLE_PROMPTS: { [key: string]: string } = {
   'oil-painting': 'oil painting style, visible brushstrokes, rich textures, classical art composition, museum quality fine art',
 };
 
+/**
+ * 生成角色或场景的视觉提示词
+ * 根据指定的视觉风格，为角色或场景生成详细的英文视觉描述
+ * @param type - 类型，'character'（角色）或'scene'（场景）
+ * @param data - 角色或场景的数据
+ * @param genre - 剧本类型/题材
+ * @param model - 使用的AI模型，默认'gpt-5.1'
+ * @param visualStyle - 视觉风格，如'live-action'、'anime'等，默认'live-action'
+ * @returns 返回英文视觉提示词，用于图像生成
+ */
 export const generateVisualPrompts = async (type: 'character' | 'scene', data: Character | Scene, genre: string, model: string = 'gpt-5.1', visualStyle: string = 'live-action'): Promise<string> => {
    // Get style-specific prompt additions
    const stylePrompt = VISUAL_STYLE_PROMPTS[visualStyle] || visualStyle;
@@ -447,8 +492,13 @@ export const generateVisualPrompts = async (type: 'character' | 'scene', data: C
 };
 
 /**
- * Agent 4 & 6: Image Generation
- * Uses antsk image generation API (gemini-3-pro-image-preview)
+ * 生成图像（Agent 4 & 6）
+ * 使用antsk图像生成API (gemini-3-pro-image-preview)
+ * 支持参考图像，确保角色和场景的一致性
+ * @param prompt - 图像生成提示词
+ * @param referenceImages - 参考图像数组（base64格式），第一张为场景参考，后续为角色参考
+ * @returns 返回生成的图像base64字符串
+ * @throws 如果图像生成失败则抛出错误
  */
 export const generateImage = async (prompt: string, referenceImages: string[] = []): Promise<string> => {
   const apiKey = checkApiKey();
@@ -561,9 +611,16 @@ export const generateImage = async (prompt: string, referenceImages: string[] = 
 };
 
 /**
- * Agent 8: Video Generation
- * Uses antsk streaming video generation API (veo_3_1_i2v_s_fast_fl_landscape or sora-2)
- * Note: This is a simplified version - actual video generation might need polling/streaming
+ * 生成视频（Agent 8）
+ * 使用antsk流式视频生成API (veo_3_1_i2v_s_fast_fl_landscape 或 sora-2)
+ * 通过起始帧和结束帧生成10秒视频片段
+ * @param prompt - 视频生成提示词
+ * @param startImageBase64 - 起始关键帧图像（base64格式）
+ * @param endImageBase64 - 结束关键帧图像（base64格式）
+ * @param model - 使用的视频生成模型，默认'veo_3_1_i2v_s_fast_fl_landscape'
+ * @returns 返回生成的视频URL
+ * @throws 如果视频生成失败则抛出错误
+ * @note 这是简化版本，实际可能需要轮询/流式处理
  */
 export const generateVideo = async (prompt: string, startImageBase64?: string, endImageBase64?: string, model: string = 'veo_3_1_i2v_s_fast_fl_landscape'): Promise<string> => {
   const apiKey = checkApiKey();
