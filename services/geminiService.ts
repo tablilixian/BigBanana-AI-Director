@@ -226,7 +226,7 @@ export const parseScriptToData = async (rawText: string, language: string = '中
       if (i > 0) await new Promise(resolve => setTimeout(resolve, 1500));
       
       console.log(`  生成角色提示词: ${characters[i].name}`);
-      characters[i].visualPrompt = await generateVisualPrompts('character', characters[i], genre, model, visualStyle);
+      characters[i].visualPrompt = await generateVisualPrompts('character', characters[i], genre, model, visualStyle, language);
     } catch (e) {
       console.error(`Failed to generate visual prompt for character ${characters[i].name}:`, e);
       // Continue with other characters even if one fails
@@ -240,7 +240,7 @@ export const parseScriptToData = async (rawText: string, language: string = '中
       if (i > 0 || characters.length > 0) await new Promise(resolve => setTimeout(resolve, 1500));
       
       console.log(`  生成场景提示词: ${scenes[i].location}`);
-      scenes[i].visualPrompt = await generateVisualPrompts('scene', scenes[i], genre, model, visualStyle);
+      scenes[i].visualPrompt = await generateVisualPrompts('scene', scenes[i], genre, model, visualStyle, language);
     } catch (e) {
       console.error(`Failed to generate visual prompt for scene ${scenes[i].location}:`, e);
       // Continue with other scenes even if one fails
@@ -358,7 +358,7 @@ export const generateShotList = async (scriptData: ScriptData, model: string = '
       4. 'cameraMovement': Use professional terms (e.g., Dolly In, Pan Right, Static, Handheld, Tracking).
       5. 'shotSize': Specify the field of view (e.g., Extreme Close-up, Medium Shot, Wide Shot).
       6. 'actionSummary': Detailed description of what happens in the shot (in ${lang}).
-      7. 'visualPrompt': Detailed English description for image generation in ${visualStyle} style. Include style-specific keywords. Keep it under 50 words.
+      7. 'visualPrompt': Detailed description for image generation in ${visualStyle} style (OUTPUT IN ${lang}). Include style-specific keywords. Keep it under 50 words.
       
       Output ONLY a valid JSON array like:
       [
@@ -465,15 +465,16 @@ const VISUAL_STYLE_PROMPTS: { [key: string]: string } = {
 
 /**
  * 生成角色或场景的视觉提示词
- * 根据指定的视觉风格，为角色或场景生成详细的英文视觉描述
+ * 根据指定的视觉风格和语言，为角色或场景生成详细的视觉描述
  * @param type - 类型，'character'（角色）或'scene'（场景）
  * @param data - 角色或场景的数据
  * @param genre - 剧本类型/题材
  * @param model - 使用的AI模型，默认'gpt-5.1'
  * @param visualStyle - 视觉风格，如'live-action'、'anime'等，默认'live-action'
- * @returns 返回英文视觉提示词，用于图像生成
+ * @param language - 输出语言，默认'中文'
+ * @returns 返回指定语言的视觉提示词，用于图像生成
  */
-export const generateVisualPrompts = async (type: 'character' | 'scene', data: Character | Scene, genre: string, model: string = 'gpt-5.1', visualStyle: string = 'live-action'): Promise<string> => {
+export const generateVisualPrompts = async (type: 'character' | 'scene', data: Character | Scene, genre: string, model: string = 'gpt-5.1', visualStyle: string = 'live-action', language: string = '中文'): Promise<string> => {
    // Get style-specific prompt additions
    const stylePrompt = VISUAL_STYLE_PROMPTS[visualStyle] || visualStyle;
    
@@ -485,7 +486,7 @@ export const generateVisualPrompts = async (type: 'character' | 'scene', data: C
    
    Data: ${JSON.stringify(data)}
    
-   Output only the prompt in English, comma-separated, focused on visual details specific to the "${visualStyle}" style.
+   Output only the prompt in ${language}, comma-separated, focused on visual details specific to the "${visualStyle}" style.
    Make sure to emphasize the ${visualStyle} rendering style throughout the prompt.`;
 
    return await retryOperation(() => chatCompletion(prompt, model, 0.7, 1024));
