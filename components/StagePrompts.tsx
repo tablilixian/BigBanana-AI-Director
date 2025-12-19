@@ -456,7 +456,7 @@ const StagePrompts: React.FC<StagePromptsProps> = ({ project, updateProject }) =
                     ))}
 
                     {/* Video Prompt Section */}
-                    {shot.interval && shot.interval.videoUrl && (
+                    {shot.interval && (
                       <div className="mt-3 pt-3 border-t border-zinc-800/50">
                         <div className="bg-purple-950/30 border border-purple-500/30 rounded p-3">
                           <div className="flex items-center justify-between mb-2">
