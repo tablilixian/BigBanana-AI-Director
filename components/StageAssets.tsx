@@ -32,12 +32,27 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
     try {
       // Find the item
       let prompt = "";
+      const language = project.language || project.scriptData?.language || '中文';
+      const visualStyle = project.visualStyle || project.scriptData?.visualStyle || 'live-action';
+      
+      // 根据语言设置添加地域特征前缀
+      const getRegionalPrefix = () => {
+        if (language === '中文' || language === 'Chinese') {
+          return type === 'character' 
+            ? 'Chinese person, East Asian facial features, Chinese ethnicity, '
+            : 'Chinese setting, East Asian architecture and aesthetics, ';
+        } else if (language === '日本語' || language === 'Japanese') {
+          return type === 'character'
+            ? 'Japanese person, East Asian facial features, Japanese ethnicity, '
+            : 'Japanese setting, Japanese architecture and aesthetics, ';
+        }
+        return ''; // 其他语言不添加特定前缀
+      };
+      
       if (type === 'character') {
         const char = project.scriptData?.characters.find(c => String(c.id) === String(id));
         if (char) {
           // Use existing prompt or generate new one
-          const visualStyle = project.visualStyle || project.scriptData?.visualStyle || 'live-action';
-          const language = project.language || project.scriptData?.language || '中文';
           prompt = char.visualPrompt || await generateVisualPrompts('character', char, project.scriptData?.genre || 'Cinematic', 'gpt-5.1', visualStyle, language);
           
           // Save the prompt if it was generated
@@ -51,8 +66,6 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
       } else {
         const scene = project.scriptData?.scenes.find(s => String(s.id) === String(id));
         if (scene) {
-          const visualStyle = project.visualStyle || project.scriptData?.visualStyle || 'live-action';
-          const language = project.language || project.scriptData?.language || '中文';
           prompt = scene.visualPrompt || await generateVisualPrompts('scene', scene, project.scriptData?.genre || 'Cinematic', 'gpt-5.1', visualStyle, language);
           
           // Save the prompt if it was generated
@@ -65,8 +78,12 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
         }
       }
 
+      // 添加地域特征前缀
+      const regionalPrefix = getRegionalPrefix();
+      const enhancedPrompt = regionalPrefix + prompt;
+
       // Real API Call
-      const imageUrl = await generateImage(prompt);
+      const imageUrl = await generateImage(enhancedPrompt);
 
       // Update state
       if (project.scriptData) {
@@ -154,10 +171,23 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
 
       setGeneratingIds(prev => new Set([...prev, varId]));
       try {
+          const language = project.language || project.scriptData?.language || '中文';
+          
+          // 根据语言设置添加种族特征
+          const getEthnicityPrefix = () => {
+            if (language === '中文' || language === 'Chinese') {
+              return 'Chinese person, East Asian facial features, Chinese ethnicity, ';
+            } else if (language === '日本語' || language === 'Japanese') {
+              return 'Japanese person, East Asian facial features, Japanese ethnicity, ';
+            }
+            return '';
+          };
+          
           // IMPORTANT: Use Base Look as reference to maintain facial consistency
           const refImages = char.referenceImage ? [char.referenceImage] : [];
-          // Enhance prompt to emphasize character consistency
-          const enhancedPrompt = `Character: ${char.name}. ${variation.visualPrompt}. Keep facial features consistent with reference.`;
+          // Enhance prompt to emphasize character consistency and ethnicity
+          const ethnicityPrefix = getEthnicityPrefix();
+          const enhancedPrompt = `${ethnicityPrefix}Character: ${char.name}. ${variation.visualPrompt}. Keep facial features consistent with reference.`;
           
           const imageUrl = await generateImage(enhancedPrompt, refImages);
 
