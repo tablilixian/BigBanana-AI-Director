@@ -386,7 +386,7 @@ export const generateShotList = async (scriptData: ScriptData, model: string = '
       1. Create EXACTLY ${shotsPerScene} shots (or ${shotsPerScene - 1} to ${shotsPerScene + 1} shots if needed for story flow) for this scene.
       2. CRITICAL: Each shot will be 10 seconds. Total shots must match the target duration formula: ${targetSeconds} seconds ÷ 10 = ${totalShotsNeeded} total shots across all scenes.
       3. DO NOT exceed ${shotsPerScene + 1} shots for this scene. Select the most important moments only.
-      4. 'cameraMovement': MUST choose from the Professional Camera Movement Reference list above. Use the exact English term (e.g., "Dolly Shot", "Pan Right Shot", "Zoom In Shot", "Tracking Shot").
+      4. 'cameraMovement': Can reference the Professional Camera Movement Reference list above for inspiration, or use your own creative camera movements. You may use the exact English terms (e.g., "Dolly Shot", "Pan Right Shot", "Zoom In Shot", "Tracking Shot") or describe custom movements.
       5. 'shotSize': Specify the field of view (e.g., Extreme Close-up, Medium Shot, Wide Shot).
       6. 'actionSummary': Detailed description of what happens in the shot (in ${lang}).
       7. 'visualPrompt': Detailed description for image generation in ${visualStyle} style (OUTPUT IN ${lang}). Include style-specific keywords. Keep it under 50 words.
