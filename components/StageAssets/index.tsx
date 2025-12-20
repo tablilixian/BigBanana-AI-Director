@@ -24,7 +24,6 @@ interface Props {
 }
 
 const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError }) => {
-  const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set());
   const [batchProgress, setBatchProgress] = useState<{current: number, total: number} | null>(null);
   const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -38,7 +37,18 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
    * 生成资源（角色或场景）
    */
   const handleGenerateAsset = async (type: 'character' | 'scene', id: string) => {
-    setGeneratingIds(prev => new Set([...prev, id]));
+    // 设置生成状态
+    if (project.scriptData) {
+      const newData = { ...project.scriptData };
+      if (type === 'character') {
+        const c = newData.characters.find(c => compareIds(c.id, id));
+        if (c) c.status = 'generating';
+      } else {
+        const s = newData.scenes.find(s => compareIds(s.id, id));
+        if (s) s.status = 'generating';
+      }
+      updateProject({ scriptData: newData });
+    }
     try {
       let prompt = "";
       
@@ -98,25 +108,37 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
         const newData = { ...project.scriptData };
         if (type === 'character') {
           const c = newData.characters.find(c => compareIds(c.id, id));
-          if (c) c.referenceImage = imageUrl;
+          if (c) {
+            c.referenceImage = imageUrl;
+            c.status = 'completed';
+          }
         } else {
           const s = newData.scenes.find(s => compareIds(s.id, id));
-          if (s) s.referenceImage = imageUrl;
+          if (s) {
+            s.referenceImage = imageUrl;
+            s.status = 'completed';
+          }
         }
         updateProject({ scriptData: newData });
       }
 
     } catch (e: any) {
       console.error(e);
+      // 设置失败状态
+      if (project.scriptData) {
+        const newData = { ...project.scriptData };
+        if (type === 'character') {
+          const c = newData.characters.find(c => compareIds(c.id, id));
+          if (c) c.status = 'failed';
+        } else {
+          const s = newData.scenes.find(s => compareIds(s.id, id));
+          if (s) s.status = 'failed';
+        }
+        updateProject({ scriptData: newData });
+      }
       if (onApiKeyError && onApiKeyError(e)) {
         return;
       }
-    } finally {
-      setGeneratingIds(prev => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
     }
   };
 
@@ -259,7 +281,14 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
     const variation = char?.variations?.find(v => compareIds(v.id, varId));
     if (!char || !variation) return;
 
-    setGeneratingIds(prev => new Set([...prev, varId]));
+    // 设置生成状态
+    if (project.scriptData) {
+      const newData = { ...project.scriptData };
+      const c = newData.characters.find(c => compareIds(c.id, charId));
+      const v = c?.variations?.find(v => compareIds(v.id, varId));
+      if (v) v.status = 'generating';
+      updateProject({ scriptData: newData });
+    }
     try {
       const refImages = char.referenceImage ? [char.referenceImage] : [];
       const regionalPrefix = getRegionalPrefix(language, 'character');
@@ -270,21 +299,26 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
       const newData = { ...project.scriptData! };
       const c = newData.characters.find(c => compareIds(c.id, charId));
       const v = c?.variations?.find(v => compareIds(v.id, varId));
-      if (v) v.referenceImage = imageUrl;
+      if (v) {
+        v.referenceImage = imageUrl;
+        v.status = 'completed';
+      }
 
       updateProject({ scriptData: newData });
     } catch (e: any) {
       console.error(e);
+      // 设置失败状态
+      if (project.scriptData) {
+        const newData = { ...project.scriptData };
+        const c = newData.characters.find(c => compareIds(c.id, charId));
+        const v = c?.variations?.find(v => compareIds(v.id, varId));
+        if (v) v.status = 'failed';
+        updateProject({ scriptData: newData });
+      }
       if (onApiKeyError && onApiKeyError(e)) {
         return;
       }
       alert("Variation generation failed");
-    } finally {
-      setGeneratingIds(prev => {
-        const next = new Set(prev);
-        next.delete(varId);
-        return next;
-      });
     }
   };
 
@@ -352,7 +386,6 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
       {selectedChar && (
         <WardrobeModal
           character={selectedChar}
-          generatingIds={generatingIds}
           onClose={() => setSelectedCharId(null)}
           onAddVariation={handleAddVariation}
           onDeleteVariation={handleDeleteVariation}
@@ -411,7 +444,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
               <CharacterCard
                 key={char.id}
                 character={char}
-                isGenerating={generatingIds.has(char.id)}
+                isGenerating={char.status === 'generating'}
                 onGenerate={() => handleGenerateAsset('character', char.id)}
                 onUpload={(file) => handleUploadCharacterImage(char.id, file)}
                 onPromptSave={(newPrompt) => handleSaveCharacterPrompt(char.id, newPrompt)}
@@ -447,7 +480,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
               <SceneCard
                 key={scene.id}
                 scene={scene}
-                isGenerating={generatingIds.has(scene.id)}
+                isGenerating={scene.status === 'generating'}
                 onGenerate={() => handleGenerateAsset('scene', scene.id)}
                 onUpload={(file) => handleUploadSceneImage(scene.id, file)}
                 onPromptSave={(newPrompt) => handleSaveScenePrompt(scene.id, newPrompt)}

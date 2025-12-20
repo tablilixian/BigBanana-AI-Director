@@ -6,7 +6,6 @@ import { generateId } from './utils';
 
 interface WardrobeModalProps {
   character: Character;
-  generatingIds: Set<string>;
   onClose: () => void;
   onAddVariation: (charId: string, name: string, prompt: string) => void;
   onDeleteVariation: (charId: string, varId: string) => void;
@@ -17,7 +16,6 @@ interface WardrobeModalProps {
 
 const WardrobeModal: React.FC<WardrobeModalProps> = ({
   character,
-  generatingIds,
   onClose,
   onAddVariation,
   onDeleteVariation,
@@ -111,7 +109,7 @@ const WardrobeModal: React.FC<WardrobeModalProps> = ({
                           <Shirt className="w-6 h-6 text-zinc-800" />
                         </div>
                       )}
-                      {generatingIds.has(variation.id) && (
+                      {variation.status === 'generating' && (
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                           <Loader2 className="w-4 h-4 text-white animate-spin" />
                         </div>
@@ -131,10 +129,10 @@ const WardrobeModal: React.FC<WardrobeModalProps> = ({
                       <div className="flex gap-3">
                         <button 
                           onClick={() => onGenerateVariation(character.id, variation.id)}
-                          disabled={generatingIds.has(variation.id)}
+                          disabled={variation.status === 'generating'}
                           className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 hover:text-white flex items-center gap-1 transition-colors disabled:opacity-50"
                         >
-                          <RefreshCw className={`w-3 h-3 ${generatingIds.has(variation.id) ? 'animate-spin' : ''}`} />
+                          <RefreshCw className={`w-3 h-3 ${variation.status === 'generating' ? 'animate-spin' : ''}`} />
                           {variation.referenceImage ? 'Regenerate' : 'Generate Look'}
                         </button>
                         <label className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer">

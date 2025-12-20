@@ -4,6 +4,7 @@ export interface CharacterVariation {
   visualPrompt: string;
   negativePrompt?: string; // 负面提示词，用于排除不想要的元素
   referenceImage?: string; // 角色变体参考图，存储为base64格式（data:image/png;base64,...）
+  status?: 'pending' | 'generating' | 'completed' | 'failed'; // 生成状态，用于loading状态持久化
 }
 
 export interface Character {
@@ -17,6 +18,7 @@ export interface Character {
   coreFeatures?: string; // 核心固定特征，用于保持角色一致性
   referenceImage?: string; // 角色基础参考图，存储为base64格式（data:image/png;base64,...）
   variations: CharacterVariation[]; // Added: List of alternative looks
+  status?: 'pending' | 'generating' | 'completed' | 'failed'; // 生成状态，用于loading状态持久化
 }
 
 export interface Scene {
@@ -27,6 +29,7 @@ export interface Scene {
   visualPrompt?: string;
   negativePrompt?: string; // 负面提示词，用于排除不想要的元素
   referenceImage?: string; // 场景参考图，存储为base64格式（data:image/png;base64,...）
+  status?: 'pending' | 'generating' | 'completed' | 'failed'; // 生成状态，用于loading状态持久化
 }
 
 export interface Keyframe {
