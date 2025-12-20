@@ -26,6 +26,8 @@ interface ShotWorkbenchProps {
   onOptimizeKeyframeWithAI: (type: 'start' | 'end') => void;
   onOptimizeBothKeyframes: () => void;
   onCopyPreviousEndFrame: () => void;
+  useAIEnhancement: boolean;
+  onToggleAIEnhancement: () => void;
   onGenerateVideo: () => void;
   onModelChange: (model: 'sora-2' | 'veo_3_1_i2v_s_fast_fl_landscape') => void;
   onEditVideoPrompt: () => void;
@@ -53,6 +55,8 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   onOptimizeKeyframeWithAI,
   onOptimizeBothKeyframes,
   onCopyPreviousEndFrame,
+  useAIEnhancement,
+  onToggleAIEnhancement,
   onGenerateVideo,
   onModelChange,
   onEditVideoPrompt,
@@ -177,6 +181,8 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
           endKeyframe={endKf}
           canCopyPrevious={shotIndex > 0}
           isAIOptimizing={isAIOptimizing}
+          useAIEnhancement={useAIEnhancement}
+          onToggleAIEnhancement={onToggleAIEnhancement}
           onGenerateKeyframe={onGenerateKeyframe}
           onUploadKeyframe={onUploadKeyframe}
           onEditPrompt={onEditKeyframePrompt}

@@ -33,7 +33,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError 
   const [batchProgress, setBatchProgress] = useState<{current: number, total: number, message: string} | null>(null);
   const [previewImage, setPreviewImage] = useState<{url: string, title: string} | null>(null);
   const [isAIGenerating, setIsAIGenerating] = useState(false);
-  const [useAIEnhancement, setUseAIEnhancement] = useState(true); // 是否使用AI增强提示词
+  const [useAIEnhancement, setUseAIEnhancement] = useState(false); // 是否使用AI增强提示词
   
   // 统一的编辑状态
   const [editModal, setEditModal] = useState<{
@@ -102,6 +102,15 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError 
     
     const visualStyle = project.visualStyle || project.scriptData?.visualStyle || 'live-action';
     
+    // 立即设置生成状态，显示loading
+    updateProject((prevProject: ProjectState) => ({
+      ...prevProject,
+      shots: prevProject.shots.map(s => {
+        if (s.id !== shot.id) return s;
+        return updateKeyframeInShot(s, type, createKeyframe(kfId, type, basePrompt, undefined, 'generating'));
+      })
+    }));
+    
     // 根据开关选择是否使用AI增强
     let prompt: string;
     if (useAIEnhancement) {
@@ -114,15 +123,6 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError 
     } else {
       prompt = buildKeyframePrompt(basePrompt, visualStyle, shot.cameraMovement, type);
     }
-    
-    // 设置生成状态
-    updateProject((prevProject: ProjectState) => ({
-      ...prevProject,
-      shots: prevProject.shots.map(s => {
-        if (s.id !== shot.id) return s;
-        return updateKeyframeInShot(s, type, createKeyframe(kfId, type, prompt, undefined, 'generating'));
-      })
-    }));
     
     try {
       const referenceImages = getRefImagesForShot(shot, project.scriptData);
@@ -656,6 +656,8 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError 
             onOptimizeKeyframeWithAI={(type) => handleOptimizeKeyframeWithAI(type)}
             onOptimizeBothKeyframes={handleOptimizeBothKeyframes}
             onCopyPreviousEndFrame={handleCopyPreviousEndFrame}
+            useAIEnhancement={useAIEnhancement}
+            onToggleAIEnhancement={() => setUseAIEnhancement(!useAIEnhancement)}
             onGenerateVideo={() => handleGenerateVideo(activeShot)}
             onModelChange={(model) => updateShot(activeShot.id, s => ({ ...s, videoModel: model }))}
             onEditVideoPrompt={() => setEditModal({ 

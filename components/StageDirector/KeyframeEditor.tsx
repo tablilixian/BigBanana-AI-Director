@@ -7,6 +7,8 @@ interface KeyframeEditorProps {
   endKeyframe?: Keyframe;
   canCopyPrevious: boolean;
   isAIOptimizing?: boolean;
+  useAIEnhancement: boolean;
+  onToggleAIEnhancement: () => void;
   onGenerateKeyframe: (type: 'start' | 'end') => void;
   onUploadKeyframe: (type: 'start' | 'end') => void;
   onEditPrompt: (type: 'start' | 'end', prompt: string) => void;
@@ -21,6 +23,8 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
   endKeyframe,
   canCopyPrevious,
   isAIOptimizing = false,
+  useAIEnhancement,
+  onToggleAIEnhancement,
   onGenerateKeyframe,
   onUploadKeyframe,
   onEditPrompt,
@@ -147,6 +151,27 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
         <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex-1">
           视觉制作 (Visual Production)
         </span>
+        
+        {/* AI 增强开关 */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-zinc-500">
+            AI增强提示词
+          </span>
+          <button
+            onClick={onToggleAIEnhancement}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+              useAIEnhancement ? 'bg-indigo-500' : 'bg-zinc-700'
+            }`}
+            title={useAIEnhancement ? '关闭AI增强：使用基础提示词快速生成' : '开启AI增强：自动扩展为专业电影级描述'}
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                useAIEnhancement ? 'translate-x-5' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+        
         {/* 一次性优化两帧按钮 */}
         <button
           onClick={onOptimizeBothWithAI}
