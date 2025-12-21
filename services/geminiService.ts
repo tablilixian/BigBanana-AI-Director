@@ -784,7 +784,7 @@ const convertVideoUrlToBase64 = async (url: string): Promise<string> => {
 
 /**
  * 生成视频(Agent 8)
- * 使用antsk流式视频生成API (veo_3_1_i2v_s_fast_fl_landscape 或 sora-2)
+ * 使用antsk视频生成API (veo_3_1_i2v_s_fast_fl_landscape 或 sora-2)
  * 通过起始帧和结束帧生成10秒视频片段
  * @param prompt - 视频生成提示词
  * @param startImageBase64 - 起始关键帧图像(base64格式)
@@ -793,6 +793,7 @@ const convertVideoUrlToBase64 = async (url: string): Promise<string> => {
  * @returns 返回生成的视频base64编码(而非URL),用于存储到indexedDB
  * @throws 如果视频生成失败则抛出错误
  * @note 视频URL会过期,因此转换为base64存储
+ * @note 使用非流式模式,超时时间为20分钟
  */
 export const generateVideo = async (prompt: string, startImageBase64?: string, endImageBase64?: string, model: string = 'veo_3_1_i2v_s_fast_fl_landscape'): Promise<string> => {
   const apiKey = checkApiKey();
@@ -826,92 +827,74 @@ export const generateVideo = async (prompt: string, startImageBase64?: string, e
     }
   }
 
-  // Use streaming to handle long video generation
-  const response = await retryOperation(async () => {
-    const res = await fetch(`${ANTSK_API_BASE}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: messages,
-        stream: true,
-        temperature: 0.7
-      })
+  // Use non-streaming mode with increased timeout for video generation
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 1200000); // 20 minutes timeout
+
+  try {
+    const response = await retryOperation(async () => {
+      const res = await fetch(`${ANTSK_API_BASE}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: messages,
+          stream: false,
+          temperature: 0.7
+        }),
+        signal: controller.signal
+      });
+
+      if (!res.ok) {
+        let errorMessage = `HTTP错误: ${res.status}`;
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.error?.message || errorMessage;
+        } catch (e) {
+          const errorText = await res.text();
+          if (errorText) errorMessage = errorText;
+        }
+        throw new Error(errorMessage);
+      }
+
+      return res;
     });
 
-    if (!res.ok) {
-      let errorMessage = `HTTP错误: ${res.status}`;
-      try {
-        const errorData = await res.json();
-        errorMessage = errorData.error?.message || errorMessage;
-      } catch (e) {
-        const errorText = await res.text();
-        if (errorText) errorMessage = errorText;
-      }
-      throw new Error(errorMessage);
+    clearTimeout(timeoutId);
+
+    // Parse non-streaming response
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    
+    // Look for video URL in the content
+    const urlMatch = content.match(/(https?:\/\/[^\s]+\.mp4)/);
+    const videoUrl = urlMatch ? urlMatch[1] : '';
+
+    if (!videoUrl) {
+      throw new Error("视频生成失败 (No video URL returned)");
     }
 
-    return res;
-  });
-
-  // Parse streaming response
-  const reader = response.body?.getReader();
-  const decoder = new TextDecoder();
-  let videoUrl = '';
-  let buffer = '';
-
-  if (reader) {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6).trim();
-          if (data === '[DONE]') break;
-          
-          try {
-            const parsed = JSON.parse(data);
-            const content = parsed.choices?.[0]?.delta?.content || '';
-            
-            // Look for video URL in the content
-            const urlMatch = content.match(/(https?:\/\/[^\s]+\.mp4)/);
-            if (urlMatch) {
-              videoUrl = urlMatch[1];
-              break;
-            }
-          } catch (e) {
-            // Skip invalid JSON
-          }
-        }
-      }
-      
-      if (videoUrl) break;
+    console.log('🎬 视频URL获取成功,正在转换为base64...');
+    
+    // 将视频URL转换为base64,避免URL过期问题
+    try {
+      const videoBase64 = await convertVideoUrlToBase64(videoUrl);
+      console.log('✅ 视频已转换为base64格式,可安全存储到IndexedDB');
+      return videoBase64;
+    } catch (error: any) {
+      console.error('❌ 视频转base64失败,返回原始URL:', error);
+      // 如果转换失败,返回原始URL作为降级方案
+      return videoUrl;
     }
-  }
-
-  if (!videoUrl) {
-    throw new Error("视频生成失败 (No video URL returned)");
-  }
-
-  console.log('🎬 视频URL获取成功,正在转换为base64...');
-  
-  // 将视频URL转换为base64,避免URL过期问题
-  try {
-    const videoBase64 = await convertVideoUrlToBase64(videoUrl);
-    console.log('✅ 视频已转换为base64格式,可安全存储到IndexedDB');
-    return videoBase64;
   } catch (error: any) {
-    console.error('❌ 视频转base64失败,返回原始URL:', error);
-    // 如果转换失败,返回原始URL作为降级方案
-    return videoUrl;
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('视频生成超时 (20分钟)');
+    }
+    throw error;
   }
 };
 

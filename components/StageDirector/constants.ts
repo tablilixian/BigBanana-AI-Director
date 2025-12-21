@@ -40,7 +40,7 @@ export const VISUAL_STYLE_PROMPTS: Record<string, string> = {
 // 视频提示词模板
 export const VIDEO_PROMPT_TEMPLATES = {
   sora2: {
-    chinese: `【画面比例：16:9 宽屏横向格式】从第一张图片（起始帧）到第二张图片（结束帧）生成平滑过渡的视频。
+    chinese: `**landscape 画面比例：16:9 宽屏横向格式** 从第一张图片（起始帧）到第二张图片（结束帧）生成平滑过渡的视频。
 
 动作描述：{actionSummary}
 
