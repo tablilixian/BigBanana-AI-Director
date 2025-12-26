@@ -51,16 +51,20 @@ const SceneContext: React.FC<SceneContextProps> = ({
               <select
                 value={shot.sceneId}
                 onChange={(e) => onSceneChange(e.target.value)}
-                className="flex-1 bg-zinc-900 text-white text-sm font-bold border border-zinc-700 rounded px-2 py-1 outline-none focus:border-indigo-500 hover:border-zinc-600 transition-colors"
+                className="flex-1 min-w-0 max-w-[180px] bg-zinc-900 text-white text-sm font-bold border border-zinc-700 rounded px-2 py-1 outline-none focus:border-indigo-500 hover:border-zinc-600 transition-colors truncate"
+                style={{ textOverflow: 'ellipsis' }}
+                title={scene?.location}
               >
                 {scenes.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.location}
+                  <option key={s.id} value={s.id} title={s.location}>
+                    {s.location.length > 20 ? `${s.location.slice(0, 20)}...` : s.location}
                   </option>
                 ))}
               </select>
             ) : (
-              <span className="text-white text-sm font-bold">{scene?.location || '未知场景'}</span>
+              <span className="text-white text-sm font-bold truncate max-w-[180px]" title={scene?.location}>
+                {scene?.location || '未知场景'}
+              </span>
             )}
             <span className="text-sm px-2 py-0.5 bg-zinc-800 text-zinc-400 rounded-full flex items-center gap-1 shrink-0">
               <Clock className="w-3 h-3" />
