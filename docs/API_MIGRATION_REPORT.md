@@ -1,12 +1,12 @@
 # API 迁移完成报告
 
 ## 概述
-已成功将项目从 **Google Gemini API** 迁移到 **antsk API**。
+已成功将项目从 **Google Gemini API** 迁移到 **AntSK API**。
 
 ## 修改文件列表
 
 ### 1. **App.tsx** ✅
-- 将 "Google Gemini API Key" 改为 "antsk API Key"
+- 将 "Google Gemini API Key" 改为 "AntSK API Key"
 - 更新文档链接指向 https://api.antsk.cn
 - 将 localStorage key 从 `bigbanana_api_key` 改为 `antsk_api_key`
 - 更新提示文本，移除 Gemini 特定要求
@@ -29,7 +29,7 @@
 - 移除 `@google/genai` 依赖
 
 ### 5. **README.md** ✅
-- 更新中文文档，将 Google Gemini 改为 antsk API
+- 更新中文文档，将 Google Gemini 改为 AntSK API
 - 更新模型列表
 - 添加购买链接
 
@@ -44,7 +44,7 @@
 ### 8. **metadata.json** ✅
 - 更新项目描述
 
-## 使用的 antsk API 端点
+## 使用的 AntSK API 端点
 
 ### 聊天和文本生成
 - **端点**: `https://api.antsk.cn/v1/chat/completions`
@@ -63,7 +63,7 @@
 ## 重要说明
 
 ### example/video-manga.js
-该文件**已经在使用 antsk API**，无需修改。它使用的端点：
+该文件**已经在使用 AntSK API**，无需修改。它使用的端点：
 - `/v1/chat/completions` - 文本生成
 - `/v1beta/models/gemini-3-pro-image-preview:generateContent` - 图片生成
 
@@ -91,7 +91,7 @@ npm run dev
 ```
 
 ### 4. 测试
-- 输入 antsk API Key
+- 输入 AntSK API Key
 - 测试剧本生成功能
 - 测试图片生成功能
 - 测试视频生成功能
@@ -99,8 +99,8 @@ npm run dev
 ## 验证状态
 ✅ 代码编译通过，无 TypeScript 错误
 ✅ 所有 Google Gemini 引用已移除
-✅ antsk API 集成完成
+✅ AntSK API 集成完成
 ✅ 文档已更新
 
 ## 迁移完成 🎉
-项目已成功从 Google Gemini API 迁移到 antsk API！
+项目已成功从 Google Gemini API 迁移到 AntSK API！

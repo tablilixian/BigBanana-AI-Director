@@ -8,7 +8,7 @@
 
 **BigBanana AI Director** is an **AI-powered, one-stop platform** for **short dramas** and **motion comics**, built for creators who want to go from idea to final video fast.
 
-Moving away from the traditional "slot machine" style of random generation, BigBanana adopts an industrial **"Script-to-Asset-to-Keyframe"** workflow. With deep integration of antsk API’s advanced AI models, it enables **one-sentence to complete drama** — fully automated from **script** to **final video**, while maintaining precise control over character consistency, scene continuity, and camera movement.
+Moving away from the traditional "slot machine" style of random generation, BigBanana adopts an industrial **"Script-to-Asset-to-Keyframe"** workflow. With deep integration of AntSK API’s advanced AI models, it enables **one-sentence to complete drama** — fully automated from **script** to **final video**, while maintaining precise control over character consistency, scene continuity, and camera movement.
 ## UI Showcase
 
 ### Project Management
@@ -76,9 +76,9 @@ Traditional Text-to-Video models often struggle with specific camera movements a
     *   **Video**: `veo-3.1-fast-generate-preview`
 *   **Storage**: IndexedDB (Local browser database, privacy-focused, no backend dependency)
 
-## Why Choose antsk API?
+## Why Choose AntSK API?
 
-This project deeply integrates [**antsk API Platform**](https://api.antsk.cn/), delivering exceptional value for creators:
+This project deeply integrates [**AntSK API Platform**](https://api.antsk.cn/), delivering exceptional value for creators:
 
 ### 🎯 Full Model Coverage
 * **Text Models**: GPT-4o, GPT-5.1, Claude 3.5 Sonnet
@@ -116,7 +116,7 @@ For **quick one-off creative tasks**, try our online tool platform:
 
 ## Quick Start
 
-1.  **Configure Key**: Launch the app and input your antsk API Key. [**Buy API Key**](https://api.antsk.cn)
+1.  **Configure Key**: Launch the app and input your AntSK API Key. [**Buy API Key**](https://api.antsk.cn)
 2.  **Input Story**: In Phase 01, enter your story idea and click "Generate Script".
 3.  **Art Direction**: Go to Phase 02, generate character sheets and scene concepts.
 4.  **Shot Production**: Go to Phase 03, generate keyframes for each shot.

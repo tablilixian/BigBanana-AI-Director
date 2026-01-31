@@ -56,7 +56,7 @@ function App() {
       // Check if error is related to API Key
       if (event.error?.name === 'ApiKeyError' || 
           event.error?.message?.includes('API Key missing') ||
-          event.error?.message?.includes('antsk API Key')) {
+          event.error?.message?.includes('AntSK API Key')) {
         console.warn('🔐 检测到 API Key 错误，正在返回登录页...');
         handleClearKey();
         event.preventDefault(); // Prevent default error display
@@ -67,7 +67,7 @@ function App() {
       // Check if rejection is related to API Key
       if (event.reason?.name === 'ApiKeyError' ||
           event.reason?.message?.includes('API Key missing') ||
-          event.reason?.message?.includes('antsk API Key')) {
+          event.reason?.message?.includes('AntSK API Key')) {
         console.warn('🔐 检测到 API Key 错误，正在返回登录页...');
         handleClearKey();
         event.preventDefault(); // Prevent default error display

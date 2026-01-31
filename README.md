@@ -9,7 +9,7 @@
 
 **BigBanana AI Director** 是一个 **AI 一站式短剧/漫剧平台**，面向创作者,实现从灵感到成片的高效生产。
 
-它摇弃了传统的"抽卡式"生成，采用 **"Script-to-Asset-to-Keyframe"** 的工业化工作流。通过深度集成 antsk API 的先进 AI 模型，实现 **"一句话生成完整短剧，从剧本到成片全自动化"**，同时精准控制角色一致性、场景连续性与镜头运动。
+它摇弃了传统的"抽卡式"生成，采用 **"Script-to-Asset-to-Keyframe"** 的工业化工作流。通过深度集成 AntSK API 的先进 AI 模型，实现 **"一句话生成完整短剧，从剧本到成片全自动化"**，同时精准控制角色一致性、场景连续性与镜头运动。
 
 ## 界面展示
 
@@ -86,9 +86,9 @@
     *   **Video**: `veo_3_1_i2v_s_fast_fl_landscape` / `sora-2` (首尾帧视频插值)
 *   **Storage**: IndexedDB (本地浏览器数据库，数据隐私安全，无后端依赖)
 
-## 为什么选择 antsk API？
+## 为什么选择 AntSK API？
 
-本项目深度集成 [**antsk API 平台**](https://api.antsk.cn/)，为创作者提供极致性价比的 AI 能力：
+本项目深度集成 [**AntSK API 平台**](https://api.antsk.cn/)，为创作者提供极致性价比的 AI 能力：
 
 ### 🎯 全模型覆盖
 * **文本模型**: GPT-4o、GPT-5.1、Claude 3.5 Sonnet
@@ -126,7 +126,7 @@
 
 ## 快速开始
 
-1.  **配置密钥**: 启动应用，输入 antsk API Key。[**立即购买**](https://api.antsk.cn)
+1.  **配置密钥**: 启动应用，输入 AntSK API Key。[**立即购买**](https://api.antsk.cn)
 2.  **故事输入**: 在 Phase 01 输入你的故事创意，点击"生成分镜脚本"。
 3.  **美术设定**: 进入 Phase 02，生成主角定妆照和核心场景图。
 4.  **分镜制作**: 进入 Phase 03，逐个生成镜头的关键帧。

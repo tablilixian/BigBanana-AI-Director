@@ -1,7 +1,7 @@
 # API Key 错误处理机制说明
 
 ## 问题描述
-系统偶尔会出现 `API Key missing. Please configure your antsk API Key.` 错误，这意味着运行时 API Key 丢失或未正确配置。
+系统偶尔会出现 `API Key missing. Please configure your AntSK API Key.` 错误，这意味着运行时 API Key 丢失或未正确配置。
 
 ## 解决方案
 
@@ -22,7 +22,7 @@ export class ApiKeyError extends Error {
 
 ```typescript
 const checkApiKey = () => {
-  if (!runtimeApiKey) throw new ApiKeyError("API Key missing. Please configure your antsk API Key.");
+  if (!runtimeApiKey) throw new ApiKeyError("API Key missing. Please configure your AntSK API Key.");
   return runtimeApiKey;
 };
 ```

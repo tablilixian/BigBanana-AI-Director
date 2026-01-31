@@ -26,11 +26,11 @@ export const setGlobalApiKey = (key: string) => {
  * @throws {ApiKeyError} 如果API密钥缺失则抛出错误
  */
 const checkApiKey = () => {
-  if (!runtimeApiKey) throw new ApiKeyError("API Key missing. Please configure your antsk API Key.");
+  if (!runtimeApiKey) throw new ApiKeyError("API Key missing. Please configure your AntSK API Key.");
   return runtimeApiKey;
 };
 
-// antsk API base URL
+// AntSK API base URL
 const ANTSK_API_BASE = 'https://api.antsk.cn';
 
 /**
