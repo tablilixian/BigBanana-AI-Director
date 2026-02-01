@@ -821,6 +821,167 @@ const convertVideoUrlToBase64 = async (url: string): Promise<string> => {
 };
 
 /**
+ * sora-2专用：使用异步API生成视频
+ * 流程：1. 创建任务 -> 2. 轮询状态 -> 3. 下载视频
+ * @param prompt - 视频生成提示词
+ * @param startImageBase64 - 起始关键帧图像(base64格式，可选)
+ * @param apiKey - API密钥
+ * @returns 返回视频的base64编码
+ */
+const generateVideoWithSora2 = async (prompt: string, startImageBase64: string | undefined, apiKey: string): Promise<string> => {
+  console.log('🎬 使用sora-2异步模式生成视频...');
+  
+  // Step 1: 创建视频任务
+  const formData = new FormData();
+  formData.append('model', 'sora-2');
+  formData.append('prompt', prompt);
+  formData.append('seconds', '8');
+  formData.append('size', '1280x720'); // 横屏尺寸
+  
+  // 如果有参考图片，添加到FormData
+  if (startImageBase64) {
+    const cleanBase64 = startImageBase64.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
+    // 将base64转换为Blob
+    const byteCharacters = atob(cleanBase64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'image/png' });
+    formData.append('input_reference', blob, 'reference.png');
+  }
+  
+  // 创建任务
+  const createResponse = await fetch(`${ANTSK_API_BASE}/v1/videos`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: formData
+  });
+  
+  if (!createResponse.ok) {
+    if (createResponse.status === 400) {
+      throw new Error('提示词可能包含不安全或违规内容，未能处理。请修改后重试。');
+    }
+    if (createResponse.status === 500) {
+      throw new Error('当前请求较多，暂时未能处理成功，请稍后重试。');
+    }
+    let errorMessage = `创建任务失败: HTTP ${createResponse.status}`;
+    try {
+      const errorData = await createResponse.json();
+      errorMessage = errorData.error?.message || errorMessage;
+    } catch (e) {
+      const errorText = await createResponse.text();
+      if (errorText) errorMessage = errorText;
+    }
+    throw new Error(errorMessage);
+  }
+  
+  const createData = await createResponse.json();
+  // 响应格式可能是 { id: "sora-2:task_xxx" } 或 { task_id: "xxx" }
+  const taskId = createData.id || createData.task_id;
+  if (!taskId) {
+    throw new Error('创建视频任务失败：未返回任务ID');
+  }
+  
+  console.log('📋 sora-2任务已创建，任务ID:', taskId);
+  
+  // Step 2: 轮询查询任务状态
+  const maxPollingTime = 1200000; // 20分钟超时
+  const pollingInterval = 5000; // 每5秒查询一次
+  const startTime = Date.now();
+  
+  let videoId: string | null = null;
+  
+  while (Date.now() - startTime < maxPollingTime) {
+    await new Promise(resolve => setTimeout(resolve, pollingInterval));
+    
+    const statusResponse = await fetch(`${ANTSK_API_BASE}/v1/videos/${taskId}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      }
+    });
+    
+    if (!statusResponse.ok) {
+      console.warn('⚠️ 查询任务状态失败，继续重试...');
+      continue;
+    }
+    
+    const statusData = await statusResponse.json();
+    const status = statusData.status;
+    
+    console.log('🔄 sora-2任务状态:', status);
+    
+    if (status === 'completed' || status === 'succeeded') {
+      // 任务完成，获取视频ID
+      // 响应可能包含 output_video 或 video_id 或 outputs
+      videoId = statusData.output_video || statusData.video_id || statusData.outputs?.[0]?.id;
+      if (!videoId && statusData.outputs && statusData.outputs.length > 0) {
+        videoId = statusData.outputs[0];
+      }
+      break;
+    } else if (status === 'failed' || status === 'error') {
+      throw new Error(`视频生成失败: ${statusData.error || statusData.message || '未知错误'}`);
+    }
+    // 其他状态（pending, processing等）继续轮询
+  }
+  
+  if (!videoId) {
+    throw new Error('视频生成超时 (20分钟) 或未返回视频ID');
+  }
+  
+  console.log('✅ sora-2视频生成完成，视频ID:', videoId);
+  
+  // Step 3: 下载视频内容
+  const downloadResponse = await fetch(`${ANTSK_API_BASE}/v1/videos/${videoId}/content`, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    }
+  });
+  
+  if (!downloadResponse.ok) {
+    throw new Error(`下载视频失败: HTTP ${downloadResponse.status}`);
+  }
+  
+  // 检查响应类型，可能直接返回视频blob或返回URL
+  const contentType = downloadResponse.headers.get('content-type');
+  
+  if (contentType && contentType.includes('video')) {
+    // 直接返回视频数据
+    const videoBlob = await downloadResponse.blob();
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        console.log('✅ sora-2视频已转换为base64格式');
+        resolve(result);
+      };
+      reader.onerror = () => reject(new Error('视频转base64失败'));
+      reader.readAsDataURL(videoBlob);
+    });
+  } else {
+    // 可能返回JSON包含URL
+    const downloadData = await downloadResponse.json();
+    const videoUrl = downloadData.url || downloadData.video_url || downloadData.download_url;
+    
+    if (!videoUrl) {
+      throw new Error('未获取到视频下载地址');
+    }
+    
+    // 下载并转换为base64
+    const videoBase64 = await convertVideoUrlToBase64(videoUrl);
+    console.log('✅ sora-2视频已转换为base64格式');
+    return videoBase64;
+  }
+};
+
+/**
  * 生成视频(Agent 8)
  * 使用antsk视频生成API (veo_3_1_i2v_s_fast_fl_landscape 或 sora-2)
  * 通过起始帧和结束帧生成10秒视频片段
@@ -831,11 +992,17 @@ const convertVideoUrlToBase64 = async (url: string): Promise<string> => {
  * @returns 返回生成的视频base64编码(而非URL),用于存储到indexedDB
  * @throws 如果视频生成失败则抛出错误
  * @note 视频URL会过期,因此转换为base64存储
- * @note 使用非流式模式,超时时间为20分钟
+ * @note sora-2使用异步API模式(/v1/videos)，其他模型使用同步模式(/v1/chat/completions)
  */
 export const generateVideo = async (prompt: string, startImageBase64?: string, endImageBase64?: string, model: string = 'veo_3_1_i2v_s_fast_fl_landscape'): Promise<string> => {
   const apiKey = checkApiKey();
   
+  // sora-2 使用异步API模式
+  if (model === 'sora-2') {
+    return generateVideoWithSora2(prompt, startImageBase64, apiKey);
+  }
+  
+  // 其他模型继续使用同步模式 (/v1/chat/completions)
   // Clean base64 strings
   const cleanStart = startImageBase64?.replace(/^data:image\/(png|jpeg|jpg);base64,/, '') || '';
   const cleanEnd = endImageBase64?.replace(/^data:image\/(png|jpeg|jpg);base64,/, '') || '';
