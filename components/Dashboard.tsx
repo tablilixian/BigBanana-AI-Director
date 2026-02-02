@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Trash2, Loader2, Folder, ChevronRight, Calendar, AlertTriangle, X, HelpCircle } from 'lucide-react';
+import { Plus, Trash2, Loader2, Folder, ChevronRight, Calendar, AlertTriangle, X, HelpCircle, Settings } from 'lucide-react';
 import { ProjectState } from '../types';
 import { getAllProjectsMetadata, createNewProjectState, deleteProjectFromDB } from '../services/storageService';
 import { useAlert } from './GlobalAlert';
@@ -7,9 +7,10 @@ import { useAlert } from './GlobalAlert';
 interface Props {
   onOpenProject: (project: ProjectState) => void;
   onShowOnboarding?: () => void;
+  onShowSettings?: () => void;
 }
 
-const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding }) => {
+const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowSettings }) => {
   const { showAlert } = useAlert();
   const [projects, setProjects] = useState<ProjectState[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -86,6 +87,16 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding }) => {
             </h1>
           </div>
           <div className="flex items-center gap-3">
+            {onShowSettings && (
+              <button 
+                onClick={onShowSettings}
+                className="group flex items-center gap-2 px-4 py-3 border border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-600 transition-colors"
+                title="系统设置"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="font-medium text-xs tracking-widest uppercase">设置</span>
+              </button>
+            )}
             {onShowOnboarding && (
               <button 
                 onClick={onShowOnboarding}

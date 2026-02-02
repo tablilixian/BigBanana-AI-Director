@@ -6,10 +6,11 @@ export const ONBOARDING_PAGES = {
   WELCOME: 0,
   WORKFLOW: 1,
   HIGHLIGHTS: 2,
-  ACTION: 3,
+  API_KEY: 3,
+  ACTION: 4,
 } as const;
 
-export const TOTAL_PAGES = 4;
+export const TOTAL_PAGES = 5;
 
 // 工作流步骤
 export const WORKFLOW_STEPS = [
