@@ -10,6 +10,7 @@ interface ShotWorkbenchProps {
   shotIndex: number;
   totalShots: number;
   scriptData?: ProjectState['scriptData'];
+  nextShotHasStartFrame?: boolean; // 下一个镜头是否有首帧
   isAIOptimizing?: boolean;
   isSplittingShot?: boolean;
   onClose: () => void;
@@ -28,6 +29,7 @@ interface ShotWorkbenchProps {
   onOptimizeKeyframeWithAI: (type: 'start' | 'end') => void;
   onOptimizeBothKeyframes: () => void;
   onCopyPreviousEndFrame: () => void;
+  onCopyNextStartFrame: () => void;
   useAIEnhancement: boolean;
   onToggleAIEnhancement: () => void;
   onGenerateVideo: () => void;
@@ -41,6 +43,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   shotIndex,
   totalShots,
   scriptData,
+  nextShotHasStartFrame = false,
   isAIOptimizing = false,
   isSplittingShot = false,
   onClose,
@@ -59,6 +62,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   onOptimizeKeyframeWithAI,
   onOptimizeBothKeyframes,
   onCopyPreviousEndFrame,
+  onCopyNextStartFrame,
   useAIEnhancement,
   onToggleAIEnhancement,
   onGenerateVideo,
@@ -211,6 +215,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
           startKeyframe={startKf}
           endKeyframe={endKf}
           canCopyPrevious={shotIndex > 0}
+          canCopyNext={shotIndex < totalShots - 1 && nextShotHasStartFrame}
           isAIOptimizing={isAIOptimizing}
           useAIEnhancement={useAIEnhancement}
           onToggleAIEnhancement={onToggleAIEnhancement}
@@ -220,6 +225,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
           onOptimizeWithAI={onOptimizeKeyframeWithAI}
           onOptimizeBothWithAI={onOptimizeBothKeyframes}
           onCopyPrevious={onCopyPreviousEndFrame}
+          onCopyNext={onCopyNextStartFrame}
           onImageClick={onImageClick}
         />
 

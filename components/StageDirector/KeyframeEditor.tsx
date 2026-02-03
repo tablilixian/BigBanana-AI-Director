@@ -1,11 +1,12 @@
 import React from 'react';
-import { Loader2, Edit2, Upload, ArrowRight, Sparkles, Wand2 } from 'lucide-react';
+import { Loader2, Edit2, Upload, ArrowRight, ArrowLeft, Sparkles, Wand2 } from 'lucide-react';
 import { Keyframe } from '../../types';
 
 interface KeyframeEditorProps {
   startKeyframe?: Keyframe;
   endKeyframe?: Keyframe;
   canCopyPrevious: boolean;
+  canCopyNext: boolean; // 是否可以复制下一镜头的首帧（需要有下一个镜头且已生成首帧）
   isAIOptimizing?: boolean;
   useAIEnhancement: boolean;
   onToggleAIEnhancement: () => void;
@@ -15,6 +16,7 @@ interface KeyframeEditorProps {
   onOptimizeWithAI: (type: 'start' | 'end') => void;
   onOptimizeBothWithAI: () => void;
   onCopyPrevious: () => void;
+  onCopyNext: () => void; // 复制下一镜头首帧到当前尾帧
   onImageClick: (url: string, title: string) => void;
 }
 
@@ -22,6 +24,7 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
   startKeyframe,
   endKeyframe,
   canCopyPrevious,
+  canCopyNext,
   isAIOptimizing = false,
   useAIEnhancement,
   onToggleAIEnhancement,
@@ -31,6 +34,7 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
   onOptimizeWithAI,
   onOptimizeBothWithAI,
   onCopyPrevious,
+  onCopyNext,
   onImageClick
 }) => {
   const renderKeyframePanel = (
@@ -139,6 +143,17 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
           >
             <ArrowRight className="w-3 h-3" />
             复制上一镜头尾帧
+          </button>
+        )}
+
+        {/* Copy Next Button for End Frame */}
+        {type === 'end' && canCopyNext && !keyframe?.imageUrl && (
+          <button
+            onClick={onCopyNext}
+            className="w-full py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1 border border-zinc-700"
+          >
+            <ArrowLeft className="w-3 h-3" />
+            复制下一镜头首帧
           </button>
         )}
       </div>

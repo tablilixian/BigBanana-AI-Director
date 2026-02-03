@@ -286,6 +286,32 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError 
   };
 
   /**
+   * 复制下一镜头的起始帧到当前镜头的结束帧
+   */
+  const handleCopyNextStartFrame = () => {
+    if (activeShotIndex >= project.shots.length - 1 || !activeShot) return;
+    
+    const nextShot = project.shots[activeShotIndex + 1];
+    const nextStartKf = nextShot?.keyframes?.find(k => k.type === 'start');
+    
+    if (!nextStartKf?.imageUrl) {
+      showAlert("下一个镜头还没有生成起始帧", { type: 'warning' });
+      return;
+    }
+    
+    const existingEndKf = activeShot.keyframes?.find(k => k.type === 'end');
+    const newEndKfId = existingEndKf?.id || generateId(`kf-${activeShot.id}-end`);
+    
+    updateShot(activeShot.id, (s) => {
+      return updateKeyframeInShot(
+        s, 
+        'end', 
+        createKeyframe(newEndKfId, 'end', nextStartKf.visualPrompt, nextStartKf.imageUrl, 'completed')
+      );
+    });
+  };
+
+  /**
    * 批量生成关键帧
    */
   const handleBatchGenerateImages = async () => {
@@ -701,6 +727,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError 
             shotIndex={activeShotIndex}
             totalShots={project.shots.length}
             scriptData={project.scriptData}
+            nextShotHasStartFrame={!!project.shots[activeShotIndex + 1]?.keyframes?.find(k => k.type === 'start')?.imageUrl}
             isAIOptimizing={isAIGenerating}
             isSplittingShot={isSplittingShot}
             onClose={() => setActiveShotId(null)}
@@ -728,6 +755,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError 
             onOptimizeKeyframeWithAI={(type) => handleOptimizeKeyframeWithAI(type)}
             onOptimizeBothKeyframes={handleOptimizeBothKeyframes}
             onCopyPreviousEndFrame={handleCopyPreviousEndFrame}
+            onCopyNextStartFrame={handleCopyNextStartFrame}
             useAIEnhancement={useAIEnhancement}
             onToggleAIEnhancement={() => setUseAIEnhancement(!useAIEnhancement)}
             onGenerateVideo={() => handleGenerateVideo(activeShot)}
