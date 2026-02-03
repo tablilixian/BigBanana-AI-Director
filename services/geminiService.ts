@@ -1,5 +1,13 @@
-import { ScriptData, Shot, Character, Scene } from "../types";
+import { ScriptData, Shot, Character, Scene, AspectRatio, VideoDuration } from "../types";
 import { addRenderLogWithTokens } from './renderLogService';
+import { 
+  getGlobalApiKey as getRegistryApiKey,
+  setGlobalApiKey as setRegistryApiKey,
+  getApiBaseUrlForModel,
+  getActiveModel,
+  getActiveChatModel,
+  getActiveVideoModel,
+} from './modelRegistry';
 
 // Custom error class for API Key issues
 export class ApiKeyError extends Error {
@@ -9,7 +17,7 @@ export class ApiKeyError extends Error {
   }
 }
 
-// Module-level variable to store the key at runtime
+// Module-level variable to store the key at runtime (for backward compatibility)
 let runtimeApiKey: string = process.env.API_KEY || "";
 
 /**
@@ -18,6 +26,8 @@ let runtimeApiKey: string = process.env.API_KEY || "";
  */
 export const setGlobalApiKey = (key: string) => {
   runtimeApiKey = key;
+  // 同时更新到 modelRegistry
+  setRegistryApiKey(key);
 };
 
 /**
@@ -26,12 +36,75 @@ export const setGlobalApiKey = (key: string) => {
  * @throws {ApiKeyError} 如果API密钥缺失则抛出错误
  */
 const checkApiKey = () => {
+  // 优先使用 modelRegistry 的 API Key
+  const registryKey = getRegistryApiKey();
+  if (registryKey) return registryKey;
+  
   if (!runtimeApiKey) throw new ApiKeyError("API Key missing. Please configure your AntSK API Key.");
   return runtimeApiKey;
 };
 
-// AntSK API base URL
-const ANTSK_API_BASE = 'https://api.antsk.cn';
+// 默认 API base URL（向后兼容）
+const DEFAULT_API_BASE = 'https://api.antsk.cn';
+
+/**
+ * 获取 API 基础 URL
+ * @param type - API 类型：'chat' | 'image' | 'video'
+ * @returns API 基础 URL
+ */
+const getApiBase = (type: 'chat' | 'image' | 'video' = 'chat'): string => {
+  try {
+    // 从 modelRegistry 获取当前激活模型的 API 基础 URL
+    const activeModel = getActiveModel(type);
+    if (activeModel) {
+      return getApiBaseUrlForModel(activeModel.id);
+    }
+    return DEFAULT_API_BASE;
+  } catch (e) {
+    // 如果配置服务不可用，使用默认值
+    return DEFAULT_API_BASE;
+  }
+};
+
+/**
+ * 获取当前激活的对话模型名称
+ */
+const getActiveChatModelName = (): string => {
+  try {
+    const model = getActiveChatModel();
+    return model?.id || 'gpt-5.1';
+  } catch (e) {
+    return 'gpt-5.1';
+  }
+};
+
+/**
+ * 获取 Veo 模型名称（根据横竖屏和是否有参考图）
+ */
+const getVeoModelName = (hasReferenceImage: boolean, aspectRatio: AspectRatio): string => {
+  const orientation = aspectRatio === '9:16' ? 'portrait' : 'landscape';
+  
+  if (hasReferenceImage) {
+    return `veo_3_1_i2v_s_fast_fl_${orientation}`;
+  } else {
+    return `veo_3_1_t2v_fast_${orientation}`;
+  }
+};
+
+/**
+ * 根据横竖屏比例获取 Sora 视频尺寸
+ */
+const getSoraVideoSize = (aspectRatio: AspectRatio): string => {
+  const sizeMap: Record<AspectRatio, string> = {
+    '16:9': '1280x720',
+    '9:16': '720x1280',
+    '1:1': '720x720',
+  };
+  return sizeMap[aspectRatio];
+};
+
+// 保留 ANTSK_API_BASE 用于向后兼容，但优先使用 getApiBase()
+const ANTSK_API_BASE = DEFAULT_API_BASE;
 
 /**
  * Verify API Key connectivity
@@ -41,7 +114,8 @@ const ANTSK_API_BASE = 'https://api.antsk.cn';
  */
 export const verifyApiKey = async (key: string): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await fetch(`${ANTSK_API_BASE}/v1/chat/completions`, {
+    const apiBase = getApiBase('chat');
+    const response = await fetch(`${apiBase}/v1/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -186,7 +260,8 @@ const chatCompletion = async (prompt: string, model: string = 'gpt-5.1', tempera
   const timeoutId = setTimeout(() => controller.abort(), timeout);
   
   try {
-    const response = await fetch(`${ANTSK_API_BASE}/v1/chat/completions`, {
+    const apiBase = getApiBase('chat');
+    const response = await fetch(`${apiBase}/v1/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -683,12 +758,23 @@ Output ONLY the visual prompt text, no explanations.`;
  * 支持参考图像，确保角色和场景的一致性
  * @param prompt - 图像生成提示词
  * @param referenceImages - 参考图像数组（base64格式），第一张为场景参考，后续为角色参考
+ * @param aspectRatio - 横竖屏比例，支持 '16:9'（横屏，默认）、'9:16'（竖屏）。注意：Gemini 3 Pro Image 不支持方形(1:1)
  * @returns 返回生成的图像base64字符串
  * @throws 如果图像生成失败则抛出错误
  */
-export const generateImage = async (prompt: string, referenceImages: string[] = []): Promise<string> => {
+export const generateImage = async (
+  prompt: string, 
+  referenceImages: string[] = [],
+  aspectRatio: AspectRatio = '16:9'
+): Promise<string> => {
   const apiKey = checkApiKey();
   const startTime = Date.now();
+  const apiBase = getApiBase('image');
+  
+  // 从 modelRegistry 获取当前激活的图片模型
+  const activeImageModel = getActiveModel('image');
+  const imageModelId = activeImageModel?.id || 'gemini-3-pro-image-preview';
+  const imageModelEndpoint = activeImageModel?.endpoint || `/v1beta/models/${imageModelId}:generateContent`;
 
   try {
     // If we have reference images, instruct the model to use them for consistency
@@ -736,20 +822,34 @@ export const generateImage = async (prompt: string, referenceImages: string[] = 
     }
   });
 
+  // 构建请求体
+  const requestBody: any = {
+    contents: [{
+      role: "user",
+      parts: parts
+    }],
+    generationConfig: {
+      responseModalities: ["TEXT", "IMAGE"]
+    }
+  };
+  
+  // 竖屏(9:16)或方形(1:1)需要添加 imageConfig 配置
+  // 横屏(16:9)是默认值，不需要额外配置
+  if (aspectRatio !== '16:9') {
+    requestBody.generationConfig.imageConfig = {
+      aspectRatio: aspectRatio
+    };
+  }
+
   const response = await retryOperation(async () => {
-    const res = await fetch(`${ANTSK_API_BASE}/v1beta/models/gemini-3-pro-image-preview:generateContent`, {
+    const res = await fetch(`${apiBase}${imageModelEndpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
         'Accept': '*/*'
       },
-      body: JSON.stringify({
-        contents: [{
-          role: "user",
-          parts: parts
-        }]
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!res.ok) {
@@ -892,21 +992,34 @@ const resizeImageToSize = async (base64Data: string, targetWidth: number, target
  * @param prompt - 视频生成提示词
  * @param startImageBase64 - 起始关键帧图像(base64格式，可选)
  * @param apiKey - API密钥
+ * @param aspectRatio - 横竖屏比例，支持 '16:9'（横屏）、'9:16'（竖屏）、'1:1'（方形）
+ * @param duration - 视频时长，支持 4、8、12 秒
  * @returns 返回视频的base64编码
  */
-const generateVideoWithSora2 = async (prompt: string, startImageBase64: string | undefined, apiKey: string): Promise<string> => {
-  console.log('🎬 使用sora-2异步模式生成视频...');
+const generateVideoWithSora2 = async (
+  prompt: string, 
+  startImageBase64: string | undefined, 
+  apiKey: string,
+  aspectRatio: AspectRatio = '16:9',
+  duration: VideoDuration = 8
+): Promise<string> => {
+  console.log(`🎬 使用sora-2异步模式生成视频 (${aspectRatio}, ${duration}秒)...`);
   
-  // 视频目标尺寸
-  const VIDEO_WIDTH = 1280;
-  const VIDEO_HEIGHT = 720;
+  // 根据横竖屏比例计算视频尺寸
+  const videoSize = getSoraVideoSize(aspectRatio);
+  const [VIDEO_WIDTH, VIDEO_HEIGHT] = videoSize.split('x').map(Number);
+  
+  console.log(`📐 视频尺寸: ${VIDEO_WIDTH}x${VIDEO_HEIGHT}`);
+  
+  // 获取 API 基础 URL
+  const apiBase = getApiBase('video');
   
   // Step 1: 创建视频任务
   const formData = new FormData();
   formData.append('model', 'sora-2');
   formData.append('prompt', prompt);
-  formData.append('seconds', '8');
-  formData.append('size', `${VIDEO_WIDTH}x${VIDEO_HEIGHT}`); // 横屏尺寸
+  formData.append('seconds', String(duration));
+  formData.append('size', videoSize);
   
   // 如果有参考图片，调整尺寸后添加到FormData
   if (startImageBase64) {
@@ -929,7 +1042,7 @@ const generateVideoWithSora2 = async (prompt: string, startImageBase64: string |
   }
   
   // 创建任务
-  const createResponse = await fetch(`${ANTSK_API_BASE}/v1/videos`, {
+  const createResponse = await fetch(`${apiBase}/v1/videos`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`
@@ -974,7 +1087,7 @@ const generateVideoWithSora2 = async (prompt: string, startImageBase64: string |
   while (Date.now() - startTime < maxPollingTime) {
     await new Promise(resolve => setTimeout(resolve, pollingInterval));
     
-    const statusResponse = await fetch(`${ANTSK_API_BASE}/v1/videos/${taskId}`, {
+    const statusResponse = await fetch(`${apiBase}/v1/videos/${taskId}`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -1029,7 +1142,7 @@ const generateVideoWithSora2 = async (prompt: string, startImageBase64: string |
       const downloadController = new AbortController();
       const downloadTimeoutId = setTimeout(() => downloadController.abort(), downloadTimeout);
       
-      const downloadResponse = await fetch(`${ANTSK_API_BASE}/v1/videos/${videoId}/content`, {
+      const downloadResponse = await fetch(`${apiBase}/v1/videos/${videoId}/content`, {
         method: 'GET',
         headers: {
           'Accept': '*/*',
@@ -1103,26 +1216,50 @@ const generateVideoWithSora2 = async (prompt: string, startImageBase64: string |
 
 /**
  * 生成视频(Agent 8)
- * 使用antsk视频生成API (veo_3_1_i2v_s_fast_fl_landscape 或 sora-2)
- * 通过起始帧和结束帧生成10秒视频片段
+ * 使用antsk视频生成API (veo_3_1 或 sora-2)
+ * 通过起始帧和结束帧生成视频片段
  * @param prompt - 视频生成提示词
  * @param startImageBase64 - 起始关键帧图像(base64格式)
  * @param endImageBase64 - 结束关键帧图像(base64格式)
- * @param model - 使用的视频生成模型,默认'veo_3_1_i2v_s_fast_fl_landscape'
+ * @param model - 使用的视频生成模型，'veo' 会根据 aspectRatio 自动选择具体模型，'sora-2' 使用异步API
+ * @param aspectRatio - 横竖屏比例，支持 '16:9'（横屏，默认）、'9:16'（竖屏）、'1:1'（方形，仅 sora-2 支持）
+ * @param duration - 视频时长（仅 sora-2 支持），支持 4、8、12 秒
  * @returns 返回生成的视频base64编码(而非URL),用于存储到indexedDB
  * @throws 如果视频生成失败则抛出错误
  * @note 视频URL会过期,因此转换为base64存储
- * @note sora-2使用异步API模式(/v1/videos)，其他模型使用同步模式(/v1/chat/completions)
+ * @note sora-2使用异步API模式(/v1/videos)，veo模型使用同步模式(/v1/chat/completions)
  */
-export const generateVideo = async (prompt: string, startImageBase64?: string, endImageBase64?: string, model: string = 'veo_3_1_i2v_s_fast_fl_landscape'): Promise<string> => {
+export const generateVideo = async (
+  prompt: string, 
+  startImageBase64?: string, 
+  endImageBase64?: string, 
+  model: string = 'veo',
+  aspectRatio: AspectRatio = '16:9',
+  duration: VideoDuration = 8
+): Promise<string> => {
   const apiKey = checkApiKey();
+  const apiBase = getApiBase('video');
   
   // sora-2 使用异步API模式
   if (model === 'sora-2') {
-    return generateVideoWithSora2(prompt, startImageBase64, apiKey);
+    return generateVideoWithSora2(prompt, startImageBase64, apiKey, aspectRatio, duration);
   }
   
-  // 其他模型继续使用同步模式 (/v1/chat/completions)
+  // 如果是 veo 模型，根据横竖屏和是否有参考图动态选择模型名称
+  let actualModel = model;
+  if (model === 'veo' || model.startsWith('veo_3_1')) {
+    const hasReferenceImage = !!startImageBase64;
+    actualModel = getVeoModelName(hasReferenceImage, aspectRatio);
+    console.log(`🎬 使用 Veo 模型: ${actualModel} (${aspectRatio})`);
+    
+    // Veo 不支持 1:1 方形视频
+    if (aspectRatio === '1:1') {
+      console.warn('⚠️ Veo 不支持方形视频 (1:1)，将使用横屏 (16:9)');
+      actualModel = getVeoModelName(hasReferenceImage, '16:9');
+    }
+  }
+  
+  // Veo 模型使用同步模式 (/v1/chat/completions)
   // Clean base64 strings
   const cleanStart = startImageBase64?.replace(/^data:image\/(png|jpeg|jpg);base64,/, '') || '';
   const cleanEnd = endImageBase64?.replace(/^data:image\/(png|jpeg|jpg);base64,/, '') || '';
@@ -1158,14 +1295,14 @@ export const generateVideo = async (prompt: string, startImageBase64?: string, e
 
   try {
     const response = await retryOperation(async () => {
-      const res = await fetch(`${ANTSK_API_BASE}/v1/chat/completions`, {
+      const res = await fetch(`${apiBase}/v1/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: model,
+          model: actualModel,
           messages: messages,
           stream: false,
           temperature: 0.7
@@ -1175,12 +1312,12 @@ export const generateVideo = async (prompt: string, startImageBase64?: string, e
 
       if (!res.ok) {
         // 特殊处理400、500状态码 - 提示词被风控拦截
-      if (res.status === 400) {
-        throw new Error('提示词可能包含不安全或违规内容，未能处理。请修改后重试。');
-      }
-      else if (res.status === 500) {
-        throw new Error('当前请求较多，暂时未能处理成功，请稍后重试。');
-      }
+        if (res.status === 400) {
+          throw new Error('提示词可能包含不安全或违规内容，未能处理。请修改后重试。');
+        }
+        else if (res.status === 500) {
+          throw new Error('当前请求较多，暂时未能处理成功，请稍后重试。');
+        }
         
         let errorMessage = `HTTP错误: ${res.status}`;
         try {

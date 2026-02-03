@@ -30,10 +30,10 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, title, 
         </div>
       )}
       
-      <div className="max-w-[95vw] max-h-[95vh] flex items-center justify-center p-8">
+      <div className="flex items-center justify-center p-8 w-full h-full">
         <img 
           src={imageUrl} 
-          className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+          className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
           onClick={(e) => e.stopPropagation()}
           alt={title || 'Preview'}
         />

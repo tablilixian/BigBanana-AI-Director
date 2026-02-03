@@ -62,7 +62,7 @@ export interface Shot {
   characterVariations?: { [characterId: string]: string }; // Added: Map char ID to variation ID for this shot
   keyframes: Keyframe[];
   interval?: VideoInterval;
-  videoModel?: 'veo_3_1_i2v_s_fast_fl_landscape' | 'sora-2'; // Video generation model selection
+  videoModel?: 'veo_3_1_i2v_s_fast_fl_landscape' | 'veo' | 'sora-2'; // Video generation model selection
 }
 
 export interface ScriptData {
@@ -112,4 +112,80 @@ export interface ProjectState {
   shots: Shot[];
   isParsingScript: boolean;
   renderLogs: RenderLog[]; // History of all API calls for this project
+}
+
+// ============================================
+// 模型管理相关类型定义
+// ============================================
+
+/**
+ * 横竖屏比例类型
+ * - 16:9: 横屏（默认）
+ * - 9:16: 竖屏
+ * - 1:1: 方形
+ */
+export type AspectRatio = '16:9' | '9:16' | '1:1';
+
+/**
+ * 视频时长类型（仅 Sora-2 支持）
+ */
+export type VideoDuration = 4 | 8 | 12;
+
+/**
+ * 模型提供商配置
+ */
+export interface ModelProvider {
+  id: string;
+  name: string;
+  baseUrl: string;  // API 基础 URL，如 'https://api.antsk.cn'
+  apiKey?: string;  // 可选的独立 API Key（如果不设置则使用全局 API Key）
+  isDefault?: boolean;  // 是否为默认提供商
+  isBuiltIn?: boolean;  // 是否为内置提供商（不可删除）
+}
+
+/**
+ * 对话模型配置
+ */
+export interface ChatModelConfig {
+  providerId: string;
+  modelName: string;  // 如 'gpt-5.1', 'gpt-41', 'gpt-5.2'
+  endpoint?: string;  // API 端点，默认为 '/v1/chat/completions'
+}
+
+/**
+ * 画图模型配置
+ */
+export interface ImageModelConfig {
+  providerId: string;
+  modelName: string;  // 如 'gemini-3-pro-image-preview'
+  endpoint?: string;  // API 端点，默认为 '/v1beta/models/{modelName}:generateContent'
+}
+
+/**
+ * 视频模型配置
+ */
+export interface VideoModelConfig {
+  providerId: string;
+  type: 'sora' | 'veo';  // sora 使用异步 API，veo 使用同步 API
+  modelName: string;  // 基础模型名，如 'sora-2', 'veo_3_1'
+  endpoint?: string;  // API 端点
+}
+
+/**
+ * 完整的模型配置
+ */
+export interface ModelConfig {
+  chatModel: ChatModelConfig;
+  imageModel: ImageModelConfig;
+  videoModel: VideoModelConfig;
+}
+
+/**
+ * 模型管理全局状态
+ */
+export interface ModelManagerState {
+  providers: ModelProvider[];
+  currentConfig: ModelConfig;
+  defaultAspectRatio: AspectRatio;
+  defaultVideoDuration: VideoDuration;
 }

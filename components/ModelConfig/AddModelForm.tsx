@@ -1,0 +1,285 @@
+/**
+ * 添加模型表单组件
+ * 支持自定义提供商和 endpoint
+ */
+
+import React, { useState } from 'react';
+import { Check, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { 
+  ModelType, 
+  ModelDefinition,
+  ChatModelParams,
+  ImageModelParams,
+  VideoModelParams,
+  DEFAULT_CHAT_PARAMS,
+  DEFAULT_IMAGE_PARAMS,
+  DEFAULT_VIDEO_PARAMS_SORA,
+  DEFAULT_VIDEO_PARAMS_VEO,
+} from '../../types/model';
+import { getProviders, addProvider } from '../../services/modelRegistry';
+
+interface AddModelFormProps {
+  type: ModelType;
+  onSave: (model: Omit<ModelDefinition, 'id' | 'isBuiltIn'>) => void;
+  onCancel: () => void;
+}
+
+const AddModelForm: React.FC<AddModelFormProps> = ({ type, onSave, onCancel }) => {
+  const existingProviders = getProviders();
+  
+  const [name, setName] = useState('');
+  const [modelId, setModelId] = useState('');
+  const [description, setDescription] = useState('');
+  const [endpoint, setEndpoint] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [videoMode, setVideoMode] = useState<'sync' | 'async'>('sync');
+  
+  // 提供商配置
+  const [providerMode, setProviderMode] = useState<'existing' | 'custom'>('existing');
+  const [selectedProviderId, setSelectedProviderId] = useState(existingProviders[0]?.id || 'antsk');
+  const [customProviderName, setCustomProviderName] = useState('');
+  const [customProviderBaseUrl, setCustomProviderBaseUrl] = useState('');
+  
+  // 展开高级选项
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const handleSave = () => {
+    if (!name.trim() || !modelId.trim()) {
+      alert('请填写模型名称和模型 ID');
+      return;
+    }
+
+    // 处理提供商
+    let providerId = selectedProviderId;
+    
+    if (providerMode === 'custom') {
+      if (!customProviderName.trim() || !customProviderBaseUrl.trim()) {
+        alert('请填写自定义提供商名称和 API 基础 URL');
+        return;
+      }
+      // 创建新提供商
+      const newProvider = addProvider({
+        name: customProviderName.trim(),
+        baseUrl: customProviderBaseUrl.trim(),
+        isDefault: false,
+      });
+      providerId = newProvider.id;
+    }
+
+    // 根据模型类型设置默认参数
+    let params: ChatModelParams | ImageModelParams | VideoModelParams;
+    
+    if (type === 'chat') {
+      params = { ...DEFAULT_CHAT_PARAMS };
+    } else if (type === 'image') {
+      params = { ...DEFAULT_IMAGE_PARAMS };
+    } else {
+      params = videoMode === 'async' 
+        ? { ...DEFAULT_VIDEO_PARAMS_SORA }
+        : { ...DEFAULT_VIDEO_PARAMS_VEO };
+    }
+
+    const model: Omit<ModelDefinition, 'id' | 'isBuiltIn'> = {
+      name: name.trim(),
+      type,
+      providerId,
+      endpoint: endpoint.trim() || undefined,
+      description: description.trim() || undefined,
+      apiKey: apiKey.trim() || undefined,
+      isEnabled: true,
+      params,
+    } as any;
+
+    // 使用用户输入的 ID
+    (model as any).id = modelId.trim();
+
+    onSave(model);
+  };
+
+  return (
+    <div className="bg-zinc-900/50 border border-zinc-700 rounded-lg p-4 space-y-4">
+      <h4 className="text-sm font-bold text-white">添加自定义模型</h4>
+      
+      {/* 基础信息 */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-[10px] text-zinc-500 block mb-1">模型名称 *</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="如：GPT-4 Turbo"
+            className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-xs text-white placeholder:text-zinc-600"
+          />
+        </div>
+        <div>
+          <label className="text-[10px] text-zinc-500 block mb-1">模型 ID *（API 实际使用的模型名）</label>
+          <input
+            type="text"
+            value={modelId}
+            onChange={(e) => setModelId(e.target.value)}
+            placeholder="如：gpt-4-turbo、claude-3-opus"
+            className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-xs text-white placeholder:text-zinc-600 font-mono"
+          />
+          <p className="text-[9px] text-zinc-600 mt-1">
+            此 ID 会作为 API 请求中的 model 参数，请填写正确的模型名称
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <label className="text-[10px] text-zinc-500 block mb-1">描述（可选）</label>
+        <input
+          type="text"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="可选的描述信息"
+          className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-xs text-white placeholder:text-zinc-600"
+        />
+      </div>
+
+      {/* API 端点 */}
+      <div>
+        <label className="text-[10px] text-zinc-500 block mb-1">API 端点 (Endpoint)</label>
+        <input
+          type="text"
+          value={endpoint}
+          onChange={(e) => setEndpoint(e.target.value)}
+          placeholder={type === 'chat' ? '/v1/chat/completions' : type === 'image' ? '/v1beta/models/{model}:generateContent' : '/v1/videos'}
+          className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-xs text-white placeholder:text-zinc-600 font-mono"
+        />
+        <p className="text-[9px] text-zinc-600 mt-1">
+          留空则使用默认端点
+        </p>
+      </div>
+
+      {/* 模型专属 API Key */}
+      <div>
+        <label className="text-[10px] text-zinc-500 block mb-1">API Key（可选）</label>
+        <input
+          type="password"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder="留空则使用全局 API Key"
+          className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-xs text-white placeholder:text-zinc-600 font-mono"
+        />
+        <p className="text-[9px] text-zinc-600 mt-1">
+          为此模型单独配置 API Key，留空则使用全局配置的 Key
+        </p>
+      </div>
+
+      {/* 提供商选择 */}
+      <div>
+        <label className="text-[10px] text-zinc-500 block mb-2">API 提供商</label>
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => setProviderMode('existing')}
+            className={`flex-1 py-2 text-xs rounded transition-colors ${
+              providerMode === 'existing'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+            }`}
+          >
+            使用已有提供商
+          </button>
+          <button
+            onClick={() => setProviderMode('custom')}
+            className={`flex-1 py-2 text-xs rounded transition-colors ${
+              providerMode === 'custom'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+            }`}
+          >
+            添加新提供商
+          </button>
+        </div>
+        
+        {providerMode === 'existing' ? (
+          <select
+            value={selectedProviderId}
+            onChange={(e) => setSelectedProviderId(e.target.value)}
+            className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-xs text-white"
+          >
+            {existingProviders.map((p) => (
+              <option key={p.id} value={p.id}>{p.name} ({p.baseUrl})</option>
+            ))}
+          </select>
+        ) : (
+          <div className="space-y-3">
+            <div>
+              <label className="text-[10px] text-zinc-500 block mb-1">提供商名称 *</label>
+              <input
+                type="text"
+                value={customProviderName}
+                onChange={(e) => setCustomProviderName(e.target.value)}
+                placeholder="如：OpenAI Official"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-xs text-white placeholder:text-zinc-600"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-zinc-500 block mb-1">API 基础 URL *</label>
+              <input
+                type="text"
+                value={customProviderBaseUrl}
+                onChange={(e) => setCustomProviderBaseUrl(e.target.value)}
+                placeholder="如：https://api.openai.com"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-xs text-white placeholder:text-zinc-600 font-mono"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 视频模型特有选项 */}
+      {type === 'video' && (
+        <div>
+          <label className="text-[10px] text-zinc-500 block mb-1">API 模式</label>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setVideoMode('sync')}
+              className={`flex-1 py-2 text-xs rounded transition-colors ${
+                videoMode === 'sync'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+              }`}
+            >
+              同步模式（Chat Completion 类）
+            </button>
+            <button
+              onClick={() => setVideoMode('async')}
+              className={`flex-1 py-2 text-xs rounded transition-colors ${
+                videoMode === 'async'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+              }`}
+            >
+              异步模式（Sora 类）
+            </button>
+          </div>
+          <p className="text-[9px] text-zinc-600 mt-1">
+            同步模式：直接返回结果；异步模式：先创建任务，再轮询获取结果
+          </p>
+        </div>
+      )}
+
+      {/* 操作按钮 */}
+      <div className="flex gap-3 pt-2">
+        <button
+          onClick={handleSave}
+          className="flex-1 py-2.5 bg-indigo-600 text-white text-xs font-bold rounded hover:bg-indigo-500 transition-colors flex items-center justify-center gap-1"
+        >
+          <Check className="w-3 h-3" />
+          添加模型
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-4 py-2.5 bg-zinc-800 text-zinc-400 text-xs rounded hover:bg-zinc-700 transition-colors"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default AddModelForm;

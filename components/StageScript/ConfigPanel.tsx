@@ -1,7 +1,8 @@
 import React from 'react';
-import { BookOpen, Wand2, BrainCircuit, AlertCircle, ChevronRight, Aperture, Languages } from 'lucide-react';
+import { BookOpen, Wand2, BrainCircuit, AlertCircle, ChevronRight, Aperture } from 'lucide-react';
 import OptionSelector from './OptionSelector';
-import { DURATION_OPTIONS, LANGUAGE_OPTIONS, MODEL_OPTIONS, VISUAL_STYLE_OPTIONS, STYLES } from './constants';
+import { DURATION_OPTIONS, LANGUAGE_OPTIONS, VISUAL_STYLE_OPTIONS, STYLES } from './constants';
+import ModelSelector from '../ModelSelector';
 
 interface Props {
   title: string;
@@ -102,22 +103,18 @@ const ConfigPanel: React.FC<Props> = ({
         />
 
         {/* Model */}
-        <OptionSelector
-          label="分镜生成模型"
-          icon={<Aperture className="w-3 h-3" />}
-          options={MODEL_OPTIONS}
-          value={model}
-          onChange={onModelChange}
-          customInput={customModelInput}
-          onCustomInputChange={onCustomModelChange}
-          customPlaceholder="输入模型名称 (如: GPT-5.2)"
-          gridCols={1}
-          helpText="查看更多模型："
-          helpLink={{
-            text: 'https://api.antsk.cn/pricing',
-            url: 'https://api.antsk.cn/pricing'
-          }}
-        />
+        <div className="space-y-2">
+          <ModelSelector
+            type="chat"
+            value={model}
+            onChange={onModelChange}
+            disabled={isProcessing}
+            label="分镜生成模型"
+          />
+          <p className="text-[9px] text-zinc-600">
+            在 <span className="text-indigo-400">模型配置</span> 中可添加更多模型
+          </p>
+        </div>
 
         {/* Visual Style */}
         <OptionSelector

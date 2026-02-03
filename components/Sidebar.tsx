@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, FileText, Users, Clapperboard, Film, Settings, ChevronLeft, ListTree, HelpCircle } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, Clapperboard, Film, ChevronLeft, ListTree, HelpCircle, Cpu } from 'lucide-react';
 import logoImg from '../logo.png';
 
 interface SidebarProps {
@@ -8,10 +8,10 @@ interface SidebarProps {
   onExit: () => void;
   projectName?: string;
   onShowOnboarding?: () => void;
-  onShowSettings?: () => void;
+  onShowModelConfig?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, projectName, onShowOnboarding, onShowSettings }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, projectName, onShowOnboarding, onShowModelConfig }) => {
   const navItems = [
     { id: 'script', label: '剧本与故事', icon: FileText, sub: 'Phase 01' },
     { id: 'assets', label: '角色与场景', icon: Users, sub: 'Phase 02' },
@@ -82,13 +82,15 @@ const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, proje
             <HelpCircle className="w-4 h-4" />
           </button>
         )}
-        <button 
-          onClick={onShowSettings}
-          className="w-full flex items-center justify-between text-zinc-600 hover:text-white cursor-pointer transition-colors"
-        >
-          <span className="font-mono text-[10px] uppercase tracking-widest">系统设置</span>
-          <Settings className="w-4 h-4" />
-        </button>
+        {onShowModelConfig && (
+          <button 
+            onClick={onShowModelConfig}
+            className="w-full flex items-center justify-between text-zinc-600 hover:text-white cursor-pointer transition-colors"
+          >
+            <span className="font-mono text-[10px] uppercase tracking-widest">模型配置</span>
+            <Cpu className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </aside>
   );
