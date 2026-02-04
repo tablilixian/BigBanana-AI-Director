@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, ToggleLeft, ToggleRight, CheckCircle, Circle } from 'lucide-react';
 import { 
   ModelDefinition, 
   ChatModelParams,
@@ -17,17 +17,21 @@ import {
 interface ModelCardProps {
   model: ModelDefinition;
   isExpanded: boolean;
+  isActive: boolean;
   onToggleExpand: () => void;
   onUpdate: (updates: Partial<ModelDefinition>) => void;
   onDelete: () => void;
+  onSetActive: () => void;
 }
 
 const ModelCard: React.FC<ModelCardProps> = ({
   model,
   isExpanded,
+  isActive,
   onToggleExpand,
   onUpdate,
   onDelete,
+  onSetActive,
 }) => {
   const [editParams, setEditParams] = useState<any>(model.params);
   const [editApiKey, setEditApiKey] = useState<string>(model.apiKey || '');
@@ -145,7 +149,9 @@ const ModelCard: React.FC<ModelCardProps> = ({
 
   return (
     <div 
-      className={`bg-zinc-900/50 border rounded-lg overflow-hidden transition-all border-zinc-800 ${!model.isEnabled ? 'opacity-60' : ''}`}
+      className={`bg-zinc-900/50 border rounded-lg overflow-hidden transition-all ${
+        isActive ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-zinc-800'
+      } ${!model.isEnabled ? 'opacity-60' : ''}`}
     >
       {/* 头部 */}
       <div className="p-4 flex items-center justify-between">
@@ -168,6 +174,26 @@ const ModelCard: React.FC<ModelCardProps> = ({
 
         {/* 操作按钮 */}
         <div className="flex items-center gap-2">
+          {/* 使用此模型按钮 */}
+          {model.isEnabled && !isActive && (
+            <button
+              onClick={onSetActive}
+              className="px-2.5 py-1 bg-indigo-600 text-white text-[10px] font-bold rounded hover:bg-indigo-500 transition-colors flex items-center gap-1"
+              title="使用此模型"
+            >
+              <Circle className="w-3 h-3" />
+              使用
+            </button>
+          )}
+          
+          {/* 当前激活标记 */}
+          {isActive && (
+            <span className="px-2.5 py-1 bg-indigo-500/20 text-indigo-300 text-[10px] font-bold rounded flex items-center gap-1">
+              <CheckCircle className="w-3 h-3" />
+              当前使用
+            </span>
+          )}
+
           {/* 启用/禁用开关 */}
           <button
             onClick={handleToggleEnabled}

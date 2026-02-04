@@ -41,6 +41,7 @@ const AddModelForm: React.FC<AddModelFormProps> = ({ type, onSave, onCancel }) =
   const [selectedProviderId, setSelectedProviderId] = useState(existingProviders[0]?.id || 'antsk');
   const [customProviderName, setCustomProviderName] = useState('');
   const [customProviderBaseUrl, setCustomProviderBaseUrl] = useState('');
+  const [customProviderApiKey, setCustomProviderApiKey] = useState('');
   
   // 展开高级选项
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -59,10 +60,12 @@ const AddModelForm: React.FC<AddModelFormProps> = ({ type, onSave, onCancel }) =
         showAlert('请填写自定义提供商名称和 API 基础 URL', { type: 'warning' });
         return;
       }
-      // 创建新提供商
+      const sanitizedBaseUrl = customProviderBaseUrl.trim().replace(/\/+$/, '');
+      // 创建新提供商（包含 API Key）
       const newProvider = addProvider({
         name: customProviderName.trim(),
-        baseUrl: customProviderBaseUrl.trim(),
+        baseUrl: sanitizedBaseUrl,
+        apiKey: customProviderApiKey.trim() || undefined,
         isDefault: false,
       });
       providerId = newProvider.id;
@@ -87,7 +90,7 @@ const AddModelForm: React.FC<AddModelFormProps> = ({ type, onSave, onCancel }) =
       providerId,
       endpoint: endpoint.trim() || undefined,
       description: description.trim() || undefined,
-      apiKey: apiKey.trim() || undefined,
+      apiKey: providerMode === 'existing' ? (apiKey.trim() || undefined) : undefined,
       isEnabled: true,
       params,
     } as any;
@@ -155,20 +158,22 @@ const AddModelForm: React.FC<AddModelFormProps> = ({ type, onSave, onCancel }) =
         </p>
       </div>
 
-      {/* 模型专属 API Key */}
-      <div>
-        <label className="text-[10px] text-zinc-500 block mb-1">API Key（可选）</label>
-        <input
-          type="password"
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-          placeholder="留空则使用全局 API Key"
-          className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-xs text-white placeholder:text-zinc-600 font-mono"
-        />
-        <p className="text-[9px] text-zinc-600 mt-1">
-          为此模型单独配置 API Key，留空则使用全局配置的 Key
-        </p>
-      </div>
+      {/* 模型专属 API Key（仅在使用已有提供商时显示） */}
+      {providerMode === 'existing' && (
+        <div>
+          <label className="text-[10px] text-zinc-500 block mb-1">API Key（可选）</label>
+          <input
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="留空则使用全局 API Key"
+            className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-xs text-white placeholder:text-zinc-600 font-mono"
+          />
+          <p className="text-[9px] text-zinc-600 mt-1">
+            为此模型单独配置 API Key，留空则使用全局配置的 Key
+          </p>
+        </div>
+      )}
 
       {/* 提供商选择 */}
       <div>
@@ -227,6 +232,19 @@ const AddModelForm: React.FC<AddModelFormProps> = ({ type, onSave, onCancel }) =
                 placeholder="如：https://api.openai.com"
                 className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-xs text-white placeholder:text-zinc-600 font-mono"
               />
+            </div>
+            <div>
+              <label className="text-[10px] text-zinc-500 block mb-1">提供商 API Key *</label>
+              <input
+                type="password"
+                value={customProviderApiKey}
+                onChange={(e) => setCustomProviderApiKey(e.target.value)}
+                placeholder="输入此提供商的 API Key"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-xs text-white placeholder:text-zinc-600 font-mono"
+              />
+              <p className="text-[9px] text-zinc-600 mt-1">
+                此 API Key 会用于该提供商下的所有模型
+              </p>
             </div>
           </div>
         )}

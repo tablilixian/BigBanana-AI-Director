@@ -415,10 +415,11 @@ export const getApiKeyForModel = (modelId: string): string | undefined => {
  */
 export const getApiBaseUrlForModel = (modelId: string): string => {
   const model = getModelById(modelId);
-  if (!model) return BUILTIN_PROVIDERS[0].baseUrl;
+  if (!model) return BUILTIN_PROVIDERS[0].baseUrl.replace(/\/+$/, '');
   
   const provider = getProviderById(model.providerId);
-  return provider?.baseUrl || BUILTIN_PROVIDERS[0].baseUrl;
+  const baseUrl = provider?.baseUrl || BUILTIN_PROVIDERS[0].baseUrl;
+  return baseUrl.replace(/\/+$/, '');
 };
 
 // ============================================

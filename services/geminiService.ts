@@ -4,9 +4,12 @@ import {
   getGlobalApiKey as getRegistryApiKey,
   setGlobalApiKey as setRegistryApiKey,
   getApiBaseUrlForModel,
+  getApiKeyForModel,
+  getModelById,
   getActiveModel,
   getActiveChatModel,
   getActiveVideoModel,
+  getActiveImageModel,
 } from './modelRegistry';
 
 // Custom error class for API Key issues
@@ -32,15 +35,37 @@ export const setGlobalApiKey = (key: string) => {
 
 /**
  * 检查API密钥是否可用
- * @returns 返回运行时API密钥
+ * @param type - 模型类型：'chat' | 'image' | 'video'，默认 'chat'
+ * @returns 返回API密钥
  * @throws {ApiKeyError} 如果API密钥缺失则抛出错误
  */
-const checkApiKey = () => {
-  // 优先使用 modelRegistry 的 API Key
+const resolveModel = (type: 'chat' | 'image' | 'video', modelId?: string) => {
+  if (modelId) {
+    const model = getModelById(modelId);
+    if (model && model.type === type) return model;
+  }
+  return getActiveModel(type);
+};
+
+const checkApiKey = (type: 'chat' | 'image' | 'video' = 'chat', modelId?: string) => {
+  // 优先使用指定模型（若提供）或当前激活模型的 API Key（包括模型专属 Key 和提供商 Key）
+  const resolvedModel = resolveModel(type, modelId);
+  console.log(`[checkApiKey] type=${type}, modelId=${modelId}, resolvedModel=`, resolvedModel?.id, resolvedModel?.providerId);
+  
+  if (resolvedModel) {
+    const modelApiKey = getApiKeyForModel(resolvedModel.id);
+    console.log(`[checkApiKey] modelApiKey found:`, !!modelApiKey, modelApiKey ? '(has key)' : '(no key)');
+    if (modelApiKey) return modelApiKey;
+  }
+  
+  // 其次使用全局 API Key
   const registryKey = getRegistryApiKey();
+  console.log(`[checkApiKey] registryKey found:`, !!registryKey);
   if (registryKey) return registryKey;
   
-  if (!runtimeApiKey) throw new ApiKeyError("API Key missing. Please configure your AntSK API Key.");
+  // 最后使用运行时 Key（向后兼容）
+  console.log(`[checkApiKey] runtimeApiKey found:`, !!runtimeApiKey);
+  if (!runtimeApiKey) throw new ApiKeyError("API Key 缺失，请在模型配置中设置 API Key。");
   return runtimeApiKey;
 };
 
@@ -52,12 +77,12 @@ const DEFAULT_API_BASE = 'https://api.antsk.cn';
  * @param type - API 类型：'chat' | 'image' | 'video'
  * @returns API 基础 URL
  */
-const getApiBase = (type: 'chat' | 'image' | 'video' = 'chat'): string => {
+const getApiBase = (type: 'chat' | 'image' | 'video' = 'chat', modelId?: string): string => {
   try {
-    // 从 modelRegistry 获取当前激活模型的 API 基础 URL
-    const activeModel = getActiveModel(type);
-    if (activeModel) {
-      return getApiBaseUrlForModel(activeModel.id);
+    // 从 modelRegistry 获取指定模型或当前激活模型的 API 基础 URL
+    const resolvedModel = resolveModel(type, modelId);
+    if (resolvedModel) {
+      return getApiBaseUrlForModel(resolvedModel.id);
     }
     return DEFAULT_API_BASE;
   } catch (e) {
@@ -239,7 +264,7 @@ const cleanJsonString = (str: string): string => {
  * @throws 如果API调用失败则抛出错误
  */
 const chatCompletion = async (prompt: string, model: string = 'gpt-5.1', temperature: number = 0.7, maxTokens: number = 8192, responseFormat?: 'json_object', timeout: number = 600000): Promise<string> => {
-  const apiKey = checkApiKey();
+  const apiKey = checkApiKey('chat', model);
   
   // console.log('🌐 API请求 - 模型:', model, '| 温度:', temperature, '| 超时:', timeout + 'ms');
   
@@ -260,8 +285,10 @@ const chatCompletion = async (prompt: string, model: string = 'gpt-5.1', tempera
   const timeoutId = setTimeout(() => controller.abort(), timeout);
   
   try {
-    const apiBase = getApiBase('chat');
-    const response = await fetch(`${apiBase}/v1/chat/completions`, {
+    const apiBase = getApiBase('chat', model);
+    const resolvedModel = resolveModel('chat', model);
+    const endpoint = resolvedModel?.endpoint || '/v1/chat/completions';
+    const response = await fetch(`${apiBase}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -767,7 +794,7 @@ export const generateImage = async (
   referenceImages: string[] = [],
   aspectRatio: AspectRatio = '16:9'
 ): Promise<string> => {
-  const apiKey = checkApiKey();
+  const apiKey = checkApiKey('image');
   const startTime = Date.now();
   const apiBase = getApiBase('image');
   
@@ -1237,7 +1264,7 @@ export const generateVideo = async (
   aspectRatio: AspectRatio = '16:9',
   duration: VideoDuration = 8
 ): Promise<string> => {
-  const apiKey = checkApiKey();
+  const apiKey = checkApiKey('video');
   const apiBase = getApiBase('video');
   
   // sora-2 使用异步API模式

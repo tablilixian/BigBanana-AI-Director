@@ -227,8 +227,9 @@ export const updateVideoModelConfig = (config: Partial<VideoModelConfig>): void 
 export const getChatApiUrl = (): string => {
   const config = getCurrentConfig();
   const provider = getProviderById(config.chatModel.providerId) || getDefaultProvider();
+  const baseUrl = provider.baseUrl.replace(/\/+$/, '');
   const endpoint = config.chatModel.endpoint || '/v1/chat/completions';
-  return `${provider.baseUrl}${endpoint}`;
+  return `${baseUrl}${endpoint}`;
 };
 
 /**
@@ -237,9 +238,10 @@ export const getChatApiUrl = (): string => {
 export const getImageApiUrl = (): string => {
   const config = getCurrentConfig();
   const provider = getProviderById(config.imageModel.providerId) || getDefaultProvider();
+  const baseUrl = provider.baseUrl.replace(/\/+$/, '');
   const modelName = config.imageModel.modelName || 'gemini-3-pro-image-preview';
   const endpoint = config.imageModel.endpoint || `/v1beta/models/${modelName}:generateContent`;
-  return `${provider.baseUrl}${endpoint}`;
+  return `${baseUrl}${endpoint}`;
 };
 
 /**
@@ -248,11 +250,12 @@ export const getImageApiUrl = (): string => {
 export const getVideoApiUrl = (): string => {
   const config = getCurrentConfig();
   const provider = getProviderById(config.videoModel.providerId) || getDefaultProvider();
+  const baseUrl = provider.baseUrl.replace(/\/+$/, '');
   
   if (config.videoModel.type === 'sora') {
-    return `${provider.baseUrl}/v1/videos`;
+    return `${baseUrl}/v1/videos`;
   } else {
-    return `${provider.baseUrl}/v1/chat/completions`;
+    return `${baseUrl}/v1/chat/completions`;
   }
 };
 
@@ -278,7 +281,7 @@ export const getApiBaseUrl = (type: 'chat' | 'image' | 'video' = 'chat'): string
   }
   
   const provider = getProviderById(providerId) || getDefaultProvider();
-  return provider.baseUrl;
+  return provider.baseUrl.replace(/\/+$/, '');
 };
 
 /**
