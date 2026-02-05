@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Sparkles, RefreshCw, Loader2, MapPin } from 'lucide-react';
-import { ProjectState, CharacterVariation, Character, Scene, AspectRatio } from '../../types';
+import { Users, Sparkles, RefreshCw, Loader2, MapPin, Archive, X, Search, Trash2 } from 'lucide-react';
+import { ProjectState, CharacterVariation, Character, Scene, AspectRatio, AssetLibraryItem } from '../../types';
 import { generateImage, generateVisualPrompts } from '../../services/geminiService';
 import { 
   getRegionalPrefix, 
@@ -17,6 +17,8 @@ import CharacterCard from './CharacterCard';
 import SceneCard from './SceneCard';
 import WardrobeModal from './WardrobeModal';
 import { useAlert } from '../GlobalAlert';
+import { getAllAssetLibraryItems, saveAssetToLibrary, deleteAssetFromLibrary } from '../../services/storageService';
+import { applyLibraryItemToProject, createLibraryItemFromCharacter, createLibraryItemFromScene } from '../../services/assetLibraryService';
 import { AspectRatioSelector } from '../AspectRatioSelector';
 import { getDefaultAspectRatio, getImageModels, getActiveImageModel, getModelById } from '../../services/modelRegistry';
 import ModelSelector from '../ModelSelector';
@@ -33,6 +35,11 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
   const [batchProgress, setBatchProgress] = useState<{current: number, total: number} | null>(null);
   const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showLibraryModal, setShowLibraryModal] = useState(false);
+  const [libraryItems, setLibraryItems] = useState<AssetLibraryItem[]>([]);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+  const [libraryQuery, setLibraryQuery] = useState('');
+  const [libraryFilter, setLibraryFilter] = useState<'all' | 'character' | 'scene'>('all');
   
   // 横竖屏选择状态
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(() => getDefaultAspectRatio());
@@ -90,6 +97,29 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
       updateProject({ scriptData: newData });
     }
   }, [project.id]); // 仅在项目ID变化时运行，避免重复执行
+
+  const refreshLibrary = async () => {
+    setLibraryLoading(true);
+    try {
+      const items = await getAllAssetLibraryItems();
+      setLibraryItems(items);
+    } catch (e) {
+      console.error('Failed to load asset library', e);
+    } finally {
+      setLibraryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showLibraryModal) {
+      refreshLibrary();
+    }
+  }, [showLibraryModal]);
+
+  const openLibrary = (filter: 'all' | 'character' | 'scene') => {
+    setLibraryFilter(filter);
+    setShowLibraryModal(true);
+  };
 
   /**
    * 生成资源（角色或场景）
@@ -277,6 +307,73 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
       }
     } catch (e: any) {
       showAlert(e.message, { type: 'error' });
+    }
+  };
+
+  const handleAddCharacterToLibrary = (char: Character) => {
+    const saveItem = async () => {
+      try {
+        const item = createLibraryItemFromCharacter(char);
+        await saveAssetToLibrary(item);
+        showAlert(`已加入资产库：${char.name}`, { type: 'success' });
+        refreshLibrary();
+      } catch (e: any) {
+        showAlert(e?.message || '加入资产库失败', { type: 'error' });
+      }
+    };
+
+    if (!char.referenceImage) {
+      showAlert('该角色暂无参考图，仍要加入资产库吗？', {
+        type: 'warning',
+        showCancel: true,
+        onConfirm: saveItem
+      });
+      return;
+    }
+
+    void saveItem();
+  };
+
+  const handleAddSceneToLibrary = (scene: Scene) => {
+    const saveItem = async () => {
+      try {
+        const item = createLibraryItemFromScene(scene);
+        await saveAssetToLibrary(item);
+        showAlert(`已加入资产库：${scene.location}`, { type: 'success' });
+        refreshLibrary();
+      } catch (e: any) {
+        showAlert(e?.message || '加入资产库失败', { type: 'error' });
+      }
+    };
+
+    if (!scene.referenceImage) {
+      showAlert('该场景暂无参考图，仍要加入资产库吗？', {
+        type: 'warning',
+        showCancel: true,
+        onConfirm: saveItem
+      });
+      return;
+    }
+
+    void saveItem();
+  };
+
+  const handleImportFromLibrary = (item: AssetLibraryItem) => {
+    try {
+      const updated = applyLibraryItemToProject(project, item);
+      updateProject(() => updated);
+      showAlert(`已导入：${item.name}`, { type: 'success' });
+    } catch (e: any) {
+      showAlert(e?.message || '导入失败', { type: 'error' });
+    }
+  };
+
+  const handleDeleteLibraryItem = async (itemId: string) => {
+    try {
+      await deleteAssetFromLibrary(itemId);
+      setLibraryItems((prev) => prev.filter((item) => item.id !== itemId));
+    } catch (e: any) {
+      showAlert(e?.message || '删除资产失败', { type: 'error' });
     }
   };
 
@@ -552,6 +649,12 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
   const allCharactersReady = project.scriptData.characters.every(c => c.referenceImage);
   const allScenesReady = project.scriptData.scenes.every(s => s.referenceImage);
   const selectedChar = project.scriptData.characters.find(c => compareIds(c.id, selectedCharId));
+  const filteredLibraryItems = libraryItems.filter((item) => {
+    if (libraryFilter !== 'all' && item.type !== libraryFilter) return false;
+    if (!libraryQuery.trim()) return true;
+    const query = libraryQuery.trim().toLowerCase();
+    return item.name.toLowerCase().includes(query);
+  });
 
   return (
     <div className={STYLES.mainContainer}>
@@ -592,6 +695,128 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
         />
       )}
 
+      {/* Asset Library Modal */}
+      {showLibraryModal && (
+        <div className={STYLES.modalOverlay} onClick={() => setShowLibraryModal(false)}>
+          <div className={STYLES.modalContainer} onClick={(e) => e.stopPropagation()}>
+            <div className={STYLES.modalHeader}>
+              <div className="flex items-center gap-3">
+                <Archive className="w-4 h-4 text-indigo-400" />
+                <div>
+                  <div className="text-sm font-bold text-white">资产库</div>
+                  <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest">
+                    {libraryItems.length} assets
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowLibraryModal(false)}
+                className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded"
+                title="关闭"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className={STYLES.modalBody}>
+              <div className="flex flex-wrap items-center gap-3 mb-6">
+                <div className="relative flex-1 min-w-[220px]">
+                  <Search className="w-4 h-4 text-zinc-600 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    value={libraryQuery}
+                    onChange={(e) => setLibraryQuery(e.target.value)}
+                    placeholder="搜索资产名称..."
+                    className="w-full pl-9 pr-3 py-2 bg-[#0F0F0F] border border-zinc-800 rounded text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  {(['all', 'character', 'scene'] as const).map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setLibraryFilter(type)}
+                      className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest border rounded ${
+                        libraryFilter === type
+                          ? 'bg-white text-black border-white'
+                          : 'bg-transparent text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-600'
+                      }`}
+                    >
+                      {type === 'all' ? '全部' : type === 'character' ? '角色' : '场景'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {libraryLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-5 h-5 text-zinc-500 animate-spin" />
+                </div>
+              ) : filteredLibraryItems.length === 0 ? (
+                <div className="border border-dashed border-zinc-800 rounded-xl p-10 text-center text-zinc-600 text-sm">
+                  暂无资产。可在角色或场景卡片中选择“加入资产库”。
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredLibraryItems.map((item) => {
+                    const preview =
+                      item.type === 'character'
+                        ? (item.data as Character).referenceImage
+                        : (item.data as Scene).referenceImage;
+                    return (
+                      <div
+                        key={item.id}
+                        className="bg-[#0F0F0F] border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-600 transition-colors"
+                      >
+                        <div className="aspect-video bg-zinc-900 relative">
+                          {preview ? (
+                            <img src={preview} alt={item.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-zinc-700">
+                              {item.type === 'character' ? (
+                                <Users className="w-8 h-8 opacity-30" />
+                              ) : (
+                                <MapPin className="w-8 h-8 opacity-30" />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-4 space-y-3">
+                          <div>
+                            <div className="text-sm text-white font-bold line-clamp-1">{item.name}</div>
+                            <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest mt-1">
+                              {item.type === 'character' ? '角色' : '场景'}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleImportFromLibrary(item)}
+                              className="flex-1 py-2 bg-white text-black hover:bg-zinc-200 rounded text-[10px] font-bold uppercase tracking-wider transition-colors"
+                            >
+                              导入到当前项目
+                            </button>
+                            <button
+                              onClick={() =>
+                                showAlert('确定从资产库删除该资源吗？', {
+                                  type: 'warning',
+                                  showCancel: true,
+                                  onConfirm: () => handleDeleteLibraryItem(item.id)
+                                })
+                              }
+                              className="p-2 border border-zinc-800 text-zinc-500 hover:text-red-400 hover:border-red-500/50 rounded transition-colors"
+                              title="删除"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className={STYLES.header}>
         <div className="flex items-center gap-4">
@@ -604,6 +829,14 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
           </h2>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => openLibrary('all')}
+            disabled={!!batchProgress}
+            className={STYLES.secondaryButton}
+          >
+            <Archive className="w-4 h-4" />
+            资产库
+          </button>
           {/* 图片模型选择 */}
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-zinc-500 uppercase">模型</span>
@@ -663,6 +896,14 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
                 新建角色
               </button>
               <button 
+                onClick={() => openLibrary('character')}
+                disabled={!!batchProgress}
+                className={STYLES.secondaryButton}
+              >
+                <Archive className="w-3 h-3" />
+                从资产库选择
+              </button>
+              <button 
                 onClick={() => handleBatchGenerate('character')}
                 disabled={!!batchProgress}
                 className={allCharactersReady ? STYLES.secondaryButton : STYLES.primaryButton}
@@ -686,6 +927,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
                 onImageClick={setPreviewImage}
                 onDelete={() => handleDeleteCharacter(char.id)}
                 onUpdateInfo={(updates) => handleUpdateCharacterInfo(char.id, updates)}
+                onAddToLibrary={() => handleAddCharacterToLibrary(char)}
               />
             ))}
           </div>
@@ -711,6 +953,14 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
                 新建场景
               </button>
               <button 
+                onClick={() => openLibrary('scene')}
+                disabled={!!batchProgress}
+                className={STYLES.secondaryButton}
+              >
+                <Archive className="w-3 h-3" />
+                从资产库选择
+              </button>
+              <button 
                 onClick={() => handleBatchGenerate('scene')}
                 disabled={!!batchProgress}
                 className={allScenesReady ? STYLES.secondaryButton : STYLES.primaryButton}
@@ -733,6 +983,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
                 onImageClick={setPreviewImage}
                 onDelete={() => handleDeleteScene(scene.id)}
                 onUpdateInfo={(updates) => handleUpdateSceneInfo(scene.id, updates)}
+                onAddToLibrary={() => handleAddSceneToLibrary(scene)}
               />
             ))}
           </div>

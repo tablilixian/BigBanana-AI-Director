@@ -32,6 +32,17 @@ export interface Scene {
   status?: 'pending' | 'generating' | 'completed' | 'failed'; // 生成状态，用于loading状态持久化
 }
 
+export type AssetLibraryItemType = 'character' | 'scene';
+
+export interface AssetLibraryItem {
+  id: string;
+  type: AssetLibraryItemType;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+  data: Character | Scene;
+}
+
 export interface Keyframe {
   id: string;
   type: 'start' | 'end';

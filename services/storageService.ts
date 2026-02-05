@@ -1,8 +1,9 @@
-import { ProjectState } from '../types';
+import { ProjectState, AssetLibraryItem } from '../types';
 
 const DB_NAME = 'BigBananaDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'projects';
+const ASSET_STORE_NAME = 'assetLibrary';
 
 const openDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
@@ -13,6 +14,9 @@ const openDB = (): Promise<IDBDatabase> => {
       const db = (event.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains(ASSET_STORE_NAME)) {
+        db.createObjectStore(ASSET_STORE_NAME, { keyPath: 'id' });
       }
     };
   });
@@ -63,6 +67,47 @@ export const getAllProjectsMetadata = async (): Promise<ProjectState[]> => {
        projects.sort((a, b) => b.lastModified - a.lastModified);
        resolve(projects);
     };
+    request.onerror = () => reject(request.error);
+  });
+};
+
+// =========================
+// Asset Library Operations
+// =========================
+
+export const saveAssetToLibrary = async (item: AssetLibraryItem): Promise<void> => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ASSET_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(ASSET_STORE_NAME);
+    const request = store.put(item);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+};
+
+export const getAllAssetLibraryItems = async (): Promise<AssetLibraryItem[]> => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ASSET_STORE_NAME, 'readonly');
+    const store = tx.objectStore(ASSET_STORE_NAME);
+    const request = store.getAll();
+    request.onsuccess = () => {
+      const items = (request.result as AssetLibraryItem[]) || [];
+      items.sort((a, b) => b.updatedAt - a.updatedAt);
+      resolve(items);
+    };
+    request.onerror = () => reject(request.error);
+  });
+};
+
+export const deleteAssetFromLibrary = async (id: string): Promise<void> => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ASSET_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(ASSET_STORE_NAME);
+    const request = store.delete(id);
+    request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
   });
 };

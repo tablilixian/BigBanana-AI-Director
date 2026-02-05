@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Check, Sparkles, Loader2, Shirt, Trash2, Edit2, AlertCircle } from 'lucide-react';
+import { User, Check, Sparkles, Loader2, Shirt, Trash2, Edit2, AlertCircle, FolderPlus } from 'lucide-react';
 import { Character } from '../../types';
 import PromptEditor from './PromptEditor';
 import ImageUploadButton from './ImageUploadButton';
@@ -14,6 +14,7 @@ interface CharacterCardProps {
   onImageClick: (imageUrl: string) => void;
   onDelete: () => void;
   onUpdateInfo: (updates: { name?: string; gender?: string; age?: string; personality?: string }) => void;
+  onAddToLibrary: () => void;
 }
 
 const CharacterCard: React.FC<CharacterCardProps> = ({
@@ -26,6 +27,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   onImageClick,
   onDelete,
   onUpdateInfo,
+  onAddToLibrary,
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingGender, setIsEditingGender] = useState(false);
@@ -242,6 +244,15 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
               {character.referenceImage ? '重新生成图片' : '生成角色图片'}
             </>
           )}
+        </button>
+
+        <button
+          onClick={onAddToLibrary}
+          disabled={isGenerating}
+          className="w-full py-2 mt-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 rounded text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          <FolderPlus className="w-3 h-3" />
+          加入资产库
         </button>
 
         {/* Delete Button */}
