@@ -217,7 +217,13 @@ function App() {
     if (!project) return null;
     switch (project.stage) {
       case 'script':
-        return <StageScript project={project} updateProject={updateProject} />;
+        return (
+          <StageScript
+            project={project}
+            updateProject={updateProject}
+            onShowModelConfig={handleShowModelConfig}
+          />
+        );
       case 'assets':
         return <StageAssets project={project} updateProject={updateProject} />;
       case 'director':

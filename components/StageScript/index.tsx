@@ -10,11 +10,12 @@ import SceneBreakdown from './SceneBreakdown';
 interface Props {
   project: ProjectState;
   updateProject: (updates: Partial<ProjectState> | ((prev: ProjectState) => ProjectState)) => void;
+  onShowModelConfig?: () => void;
 }
 
 type TabMode = 'story' | 'script';
 
-const StageScript: React.FC<Props> = ({ project, updateProject }) => {
+const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfig }) => {
   const [activeTab, setActiveTab] = useState<TabMode>(project.scriptData ? 'script' : 'story');
   
   // Configuration state
@@ -408,6 +409,7 @@ const StageScript: React.FC<Props> = ({ project, updateProject }) => {
             customStyleInput={customStyleInput}
             isProcessing={isProcessing}
             error={error}
+            onShowModelConfig={onShowModelConfig}
             onTitleChange={setLocalTitle}
             onDurationChange={setLocalDuration}
             onLanguageChange={setLocalLanguage}

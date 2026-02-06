@@ -15,6 +15,7 @@ interface Props {
   customStyleInput: string;
   isProcessing: boolean;
   error: string | null;
+  onShowModelConfig?: () => void;
   onTitleChange: (value: string) => void;
   onDurationChange: (value: string) => void;
   onLanguageChange: (value: string) => void;
@@ -37,6 +38,7 @@ const ConfigPanel: React.FC<Props> = ({
   customStyleInput,
   isProcessing,
   error,
+  onShowModelConfig,
   onTitleChange,
   onDurationChange,
   onLanguageChange,
@@ -112,7 +114,15 @@ const ConfigPanel: React.FC<Props> = ({
             label="分镜生成模型"
           />
           <p className="text-[9px] text-[var(--text-muted)]">
-            在 <span className="text-[var(--accent-text)]">模型配置</span> 中可添加更多模型
+            在{' '}
+            <button
+              type="button"
+              onClick={onShowModelConfig}
+              className="text-[var(--accent-text)] hover:text-[var(--accent-text-hover)] underline underline-offset-2 transition-colors"
+            >
+              模型配置
+            </button>{' '}
+            中可添加更多模型
           </p>
         </div>
 
