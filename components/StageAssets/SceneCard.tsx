@@ -191,7 +191,7 @@ const SceneCard: React.FC<SceneCardProps> = ({
             onSave={onPromptSave}
             label="场景提示词"
             placeholder="输入场景视觉描述..."
-            maxHeight="max-h-[120px]"
+            maxHeight="max-h-[160px]"
           />
         </div>
 

@@ -14,7 +14,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
   onSave,
   label = '提示词',
   placeholder = '输入视觉描述...',
-  maxHeight = 'max-h-[200px]',
+  maxHeight = 'max-h-[260px]',
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState(prompt);
@@ -57,7 +57,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
           <textarea
             value={editedPrompt}
             onChange={(e) => setEditedPrompt(e.target.value)}
-            className={`flex-1 bg-[var(--bg-base)] border border-[var(--accent)] text-[var(--text-primary)] px-3 py-2 text-xs rounded-lg focus:outline-none focus:ring-1 focus:ring-[var(--accent)] resize-none font-mono leading-relaxed min-h-[100px] ${maxHeight}`}
+            className={`flex-1 bg-[var(--bg-base)] border border-[var(--accent)] text-[var(--text-primary)] px-3 py-2 text-xs rounded-lg focus:outline-none focus:ring-1 focus:ring-[var(--accent)] resize-none font-mono leading-relaxed min-h-[140px] ${maxHeight}`}
             placeholder={placeholder}
             autoFocus
           />

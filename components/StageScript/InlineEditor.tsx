@@ -27,7 +27,7 @@ const InlineEditor: React.FC<Props> = ({
   onSave,
   onCancel,
   placeholder = '输入内容...',
-  rows = 4,
+  rows = 6,
   mono = false,
   italic = false,
   showEditButton = true,

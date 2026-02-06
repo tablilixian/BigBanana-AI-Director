@@ -255,7 +255,7 @@ const ShotRow: React.FC<Props> = ({
             onSave={onSavePrompt}
             onCancel={onCancelPrompt}
             placeholder="输入画面提示词..."
-            rows={4}
+            rows={6}
             mono={true}
             showEditButton={false}
           />
@@ -286,7 +286,7 @@ const ShotRow: React.FC<Props> = ({
           onSave={onSavePrompt}
           onCancel={onCancelPrompt}
           placeholder="输入画面提示词..."
-          rows={6}
+          rows={8}
           mono={true}
           showEditButton={false}
         />

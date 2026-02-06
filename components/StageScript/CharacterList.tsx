@@ -43,7 +43,7 @@ const CharacterList: React.FC<Props> = ({
                   onSave={() => onSave(c.id, editingPrompt)}
                   onCancel={onCancel}
                   placeholder="输入角色视觉描述..."
-                  rows={4}
+                  rows={6}
                   mono={true}
                   emptyText="暂无视觉描述"
                 />
