@@ -40,28 +40,28 @@ export const VISUAL_STYLE_PROMPTS: Record<string, string> = {
 // 视频提示词模板
 export const VIDEO_PROMPT_TEMPLATES = {
   sora2: {
-    chinese: `从第一张图片（起始帧）到第二张图片（结束帧）生成平滑过渡的视频。
+    chinese: `基于提供的参考图片生成视频。
 
 动作描述：{actionSummary}
 
 技术要求：
-- 关键：视频必须从第一张图片的精确构图开始，逐渐过渡到第二张图片的精确构图结束
+- 关键：视频必须从参考图片的精确构图和画面内容开始，自然展开后续动作
 - 镜头运动：{cameraMovement}
-- 过渡：确保起始帧和结束帧之间自然流畅的运动，避免跳跃或不连续
+- 运动：确保动作流畅自然，避免突兀的跳跃或不连续
 - 视觉风格：电影质感，全程保持一致的光照和色调
-- 细节：保持两帧之间角色和场景的连续性和一致性
+- 细节：保持角色外观和场景环境的全程一致性
 - 语言：配音和字幕使用中文`,
     
-    english: `Generate a smooth transition video from the first image (start frame) to the second image (end frame).
+    english: `Generate a video based on the provided reference image.
 
 Action Description: {actionSummary}
 
 Technical Requirements:
-- CRITICAL: The video MUST begin with the exact composition of the first image and gradually transition to end with the exact composition of the second image
+- CRITICAL: The video MUST begin with the exact composition and content of the reference image, then naturally develop the subsequent action
 - Camera Movement: {cameraMovement}
-- Transition: Ensure natural and fluid motion between start and end frames, avoid jumps or discontinuities
+- Motion: Ensure smooth and natural movement, avoid abrupt jumps or discontinuities
 - Visual Style: Cinematic quality with consistent lighting and color tone throughout
-- Details: Maintain character and scene continuity and consistency between both frames
+- Details: Maintain character appearance and scene environment consistency throughout
 - Language: Use {language} for voiceover and subtitles`
   },
   
