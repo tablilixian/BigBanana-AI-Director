@@ -16,6 +16,7 @@ interface VideoGeneratorProps {
   hasEndFrame: boolean;
   onGenerate: (aspectRatio: AspectRatio, duration: VideoDuration, modelId: string) => void;
   onEditPrompt: () => void;
+  onModelChange?: (modelId: string) => void;
 }
 
 const VideoGenerator: React.FC<VideoGeneratorProps> = ({
@@ -23,7 +24,8 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
   hasStartFrame,
   hasEndFrame,
   onGenerate,
-  onEditPrompt
+  onEditPrompt,
+  onModelChange
 }) => {
   // 获取可用的视频模型
   const videoModels = getVideoModels().filter(m => m.isEnabled);
@@ -89,7 +91,11 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({
         </label>
         <select
           value={selectedModelId}
-          onChange={(e) => setSelectedModelId(e.target.value)}
+          onChange={(e) => {
+            const newModelId = e.target.value;
+            setSelectedModelId(newModelId);
+            onModelChange?.(newModelId);
+          }}
           className="w-full bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-secondary)] rounded-lg px-3 py-2 text-xs outline-none focus:border-[var(--accent)] transition-colors"
           disabled={isGenerating}
         >

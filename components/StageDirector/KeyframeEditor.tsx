@@ -5,6 +5,7 @@ import { Keyframe } from '../../types';
 interface KeyframeEditorProps {
   startKeyframe?: Keyframe;
   endKeyframe?: Keyframe;
+  showEndFrame?: boolean;
   canCopyPrevious: boolean;
   canCopyNext: boolean; // 是否可以复制下一镜头的首帧（需要有下一个镜头且已生成首帧）
   isAIOptimizing?: boolean;
@@ -23,6 +24,7 @@ interface KeyframeEditorProps {
 const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
   startKeyframe,
   endKeyframe,
+  showEndFrame = true,
   canCopyPrevious,
   canCopyNext,
   isAIOptimizing = false,
@@ -188,29 +190,31 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
         </div>
         
         {/* 一次性优化两帧按钮 */}
-        <button
-          onClick={onOptimizeBothWithAI}
-          disabled={isAIOptimizing}
-          className="px-3 py-1.5 bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-[var(--btn-primary-text)] rounded text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-          title="AI一次性优化起始帧和结束帧（推荐）"
-        >
-          {isAIOptimizing ? (
-            <>
-              <Loader2 className="w-3 h-3 animate-spin" />
-              <span>优化中...</span>
-            </>
-          ) : (
-            <>
-              <Wand2 className="w-3 h-3" />
-              <span>AI优化两帧</span>
-            </>
-          )}
-        </button>
+        {showEndFrame && (
+          <button
+            onClick={onOptimizeBothWithAI}
+            disabled={isAIOptimizing}
+            className="px-3 py-1.5 bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-[var(--btn-primary-text)] rounded text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="AI一次性优化起始帧和结束帧（推荐）"
+          >
+            {isAIOptimizing ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>优化中...</span>
+              </>
+            ) : (
+              <>
+                <Wand2 className="w-3 h-3" />
+                <span>AI优化两帧</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className={`grid gap-4 ${showEndFrame ? 'grid-cols-2' : 'grid-cols-1'}`}>
         {renderKeyframePanel('start', '起始帧', startKeyframe)}
-        {renderKeyframePanel('end', '结束帧', endKeyframe)}
+        {showEndFrame && renderKeyframePanel('end', '结束帧', endKeyframe)}
       </div>
     </div>
   );

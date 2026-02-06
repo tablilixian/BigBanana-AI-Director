@@ -756,6 +756,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError 
             shotIndex={activeShotIndex}
             totalShots={project.shots.length}
             scriptData={project.scriptData}
+            currentVideoModelId={activeShot.videoModel || DEFAULTS.videoModel}
             nextShotHasStartFrame={!!project.shots[activeShotIndex + 1]?.keyframes?.find(k => k.type === 'start')?.imageUrl}
             isAIOptimizing={isAIGenerating}
             isSplittingShot={isSplittingShot}
@@ -788,6 +789,10 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError 
             useAIEnhancement={useAIEnhancement}
             onToggleAIEnhancement={() => setUseAIEnhancement(!useAIEnhancement)}
             onGenerateVideo={(aspectRatio, duration, modelId) => handleGenerateVideo(activeShot, aspectRatio, duration, modelId)}
+            onVideoModelChange={(modelId) => updateShot(activeShot.id, s => ({
+              ...s,
+              videoModel: modelId as any
+            }))}
             onEditVideoPrompt={() => {
               // 如果videoPrompt不存在，动态生成一个
               let promptValue = activeShot.interval?.videoPrompt;

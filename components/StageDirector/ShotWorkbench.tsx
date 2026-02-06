@@ -10,6 +10,7 @@ interface ShotWorkbenchProps {
   shotIndex: number;
   totalShots: number;
   scriptData?: ProjectState['scriptData'];
+  currentVideoModelId: string;
   nextShotHasStartFrame?: boolean; // 下一个镜头是否有首帧
   isAIOptimizing?: boolean;
   isSplittingShot?: boolean;
@@ -34,6 +35,7 @@ interface ShotWorkbenchProps {
   onToggleAIEnhancement: () => void;
   onGenerateVideo: (aspectRatio: AspectRatio, duration: VideoDuration, modelId: string) => void;
   onEditVideoPrompt: () => void;
+  onVideoModelChange: (modelId: string) => void;
   onImageClick: (url: string, title: string) => void;
 }
 
@@ -42,6 +44,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   shotIndex,
   totalShots,
   scriptData,
+  currentVideoModelId,
   nextShotHasStartFrame = false,
   isAIOptimizing = false,
   isSplittingShot = false,
@@ -66,6 +69,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   onToggleAIEnhancement,
   onGenerateVideo,
   onEditVideoPrompt,
+  onVideoModelChange,
   onImageClick
 }) => {
   const scene = scriptData?.scenes.find(s => String(s.id) === String(shot.sceneId));
@@ -74,6 +78,8 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   
   const startKf = shot.keyframes?.find(k => k.type === 'start');
   const endKf = shot.keyframes?.find(k => k.type === 'end');
+  const normalizedModelId = currentVideoModelId.trim().toLowerCase();
+  const showEndFrame = normalizedModelId.startsWith('veo');
   
   // 从shot.id中提取显示编号
   const getShotDisplayNumber = () => {
@@ -212,6 +218,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
         <KeyframeEditor
           startKeyframe={startKf}
           endKeyframe={endKf}
+          showEndFrame={showEndFrame}
           canCopyPrevious={shotIndex > 0}
           canCopyNext={shotIndex < totalShots - 1 && nextShotHasStartFrame}
           isAIOptimizing={isAIOptimizing}
@@ -234,6 +241,7 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
           hasEndFrame={!!endKf?.imageUrl}
           onGenerate={onGenerateVideo}
           onEditPrompt={onEditVideoPrompt}
+          onModelChange={onVideoModelChange}
         />
       </div>
     </div>
