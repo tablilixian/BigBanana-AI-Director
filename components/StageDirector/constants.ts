@@ -66,30 +66,31 @@ Technical Requirements:
   },
   
   // 九宫格分镜模式的视频提示词（Sora-2 专用，精简版，避免超过8192字符限制）
+  // 保留9个面板的景别/角度顺序，但description截断控制总长度
   sora2NineGrid: {
     chinese: `⚠️ 最高优先级指令：参考图是3x3九宫格分镜板，严禁在视频中展示！视频第一帧必须是面板1的全屏场景画面。
-
 ⛔ 绝对禁止：不要在视频任何帧展示九宫格原图、网格画面、缩略图集或多画面拼贴。
 
-参考图中的九宫格从左到右、从上到下分别是面板1→9，代表9个不同的镜头视角。视频应从面板1的全屏画面开始，按顺序切换到面板9，形成流畅的蒙太奇剪辑。
-
-当前镜头起始视角（面板1）：{panel1Description}
-
 动作描述：{actionSummary}
-镜头运动：{cameraMovement}
-每个视角约停留{secondsPerPanel}秒，保持角色外观一致，电影质感，中文配音。`,
+
+九宫格镜头顺序（参考图从左到右、从上到下）：
+{panelDescriptions}
+
+视频从面板1全屏画面开始，按1→9顺序切换视角，形成蒙太奇剪辑。
+每个视角约{secondsPerPanel}秒，镜头运动：{cameraMovement}
+保持角色外观一致，电影质感，中文配音。`,
 
     english: `⚠️ HIGHEST PRIORITY: The reference image is a 3x3 storyboard grid — NEVER show it in the video! The first frame MUST be the full-screen scene from Panel 1.
-
 ⛔ FORBIDDEN: Do NOT show the grid image, grid lines, thumbnail collection, or multi-panel layout in ANY frame.
 
-The 9 panels in the reference grid (left-to-right, top-to-bottom = Panel 1→9) represent 9 different camera angles. The video should start with Panel 1's full-screen shot, then transition through each angle sequentially to Panel 9 as a smooth montage.
-
-Starting angle (Panel 1): {panel1Description}
-
 Action: {actionSummary}
-Camera Movement: {cameraMovement}
-Each angle lasts ~{secondsPerPanel}s. Maintain character consistency, cinematic quality. Language: {language}.`
+
+Storyboard shot sequence (reference grid, left-to-right, top-to-bottom):
+{panelDescriptions}
+
+Start video with Panel 1 full-screen, transition through 1→9 as a montage.
+~{secondsPerPanel}s per angle. Camera: {cameraMovement}
+Maintain character consistency, cinematic quality. Language: {language}.`
   },
 
   veo: {
