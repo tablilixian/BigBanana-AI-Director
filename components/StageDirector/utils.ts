@@ -139,11 +139,13 @@ export const buildVideoPrompt = (
 ): string => {
   const isChinese = language === '中文' || language === 'Chinese';
   
-  // 九宫格分镜模式：有九宫格数据时，使用 sora-2 专用提示词
+  // 九宫格分镜模式：有九宫格数据时，使用 sora-2 专用精简提示词
+  // 只传入面板1的描述作为起始视角参考，避免拼接全部9个面板导致超过 Sora-2 的 8192 字符限制
   if (nineGrid && nineGrid.panels.length > 0 && videoModel === 'sora-2') {
-    const panelDescriptions = nineGrid.panels.map((p, idx) => 
-      `  面板${idx + 1} [${NINE_GRID.positionLabels[idx]}]: ${p.shotSize}/${p.cameraAngle} - ${p.description}`
-    ).join('\n');
+    const panel1 = nineGrid.panels[0];
+    const panel1Description = panel1 
+      ? `${panel1.shotSize}/${panel1.cameraAngle} - ${panel1.description}`
+      : actionSummary;
     
     const totalDuration = videoDuration || 8;
     const secondsPerPanel = Math.max(0.5, Math.round((totalDuration / 9) * 10) / 10);
@@ -154,7 +156,7 @@ export const buildVideoPrompt = (
     
     return template
       .replace('{actionSummary}', actionSummary)
-      .replace('{panelDescriptions}', panelDescriptions)
+      .replace('{panel1Description}', panel1Description)
       .replace(/\{secondsPerPanel\}/g, String(secondsPerPanel))
       .replace('{cameraMovement}', cameraMovement)
       .replace('{language}', language);

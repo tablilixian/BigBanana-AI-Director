@@ -65,59 +65,31 @@ Technical Requirements:
 - Language: Use {language} for voiceover and subtitles`
   },
   
-  // 九宫格分镜模式的视频提示词（Sora-2 专用）
+  // 九宫格分镜模式的视频提示词（Sora-2 专用，精简版，避免超过8192字符限制）
   sora2NineGrid: {
-    chinese: `⚠️ 最高优先级指令 ⚠️：提供的参考图片是一张3x3九宫格分镜板，这张图只是镜头规划的元数据，严禁在视频任何画面中出现！视频第一帧必须直接是面板1描述的全屏镜头画面——不是九宫格图片，不是缩略图，不是分镜板，而是面板1描述的实际场景画面。
+    chinese: `⚠️ 最高优先级指令：参考图是3x3九宫格分镜板，严禁在视频中展示！视频第一帧必须是面板1的全屏场景画面。
 
-⛔ 绝对禁止事项（违反任何一条将视为失败）：
-1. 禁止在视频的第一帧、最后一帧或任何中间帧展示九宫格分镜板原图
-2. 禁止在视频中出现任何包含网格线、分割线或多格画面的分镜板样式画面
-3. 禁止将参考图片作为视频的开场画面或转场画面
-4. 禁止展示任何缩略图集合、图片拼贴或多画面并列的效果
+⛔ 绝对禁止：不要在视频任何帧展示九宫格原图、网格画面、缩略图集或多画面拼贴。
 
-✅ 正确做法：
-视频必须直接从面板1描述的全屏场景画面开始（就像一部真正的电影那样开场），然后按照面板1→9的顺序依次切换镜头视角，生成一段连贯的视频。
+参考图中的九宫格从左到右、从上到下分别是面板1→9，代表9个不同的镜头视角。视频应从面板1的全屏画面开始，按顺序切换到面板9，形成流畅的蒙太奇剪辑。
+
+当前镜头起始视角（面板1）：{panel1Description}
 
 动作描述：{actionSummary}
+镜头运动：{cameraMovement}
+每个视角约停留{secondsPerPanel}秒，保持角色外观一致，电影质感，中文配音。`,
 
-九宫格各面板镜头规划（仅作为镜头调度参考，不要在视频中展示这个规划表本身）：
-{panelDescriptions}
+    english: `⚠️ HIGHEST PRIORITY: The reference image is a 3x3 storyboard grid — NEVER show it in the video! The first frame MUST be the full-screen scene from Panel 1.
 
-技术要求：
-- 【最高优先级】视频的第一帧就是面板1所描述的镜头画面，全屏呈现，就像电影开场的第一个镜头。重申：绝对不要在视频开头展示九宫格分镜板原图、缩略图集、或任何网格形式的画面！
-- 【高优先级】不要让9个格子各自独立运动！这不是一个九宫格动画。而是按面板1→9的顺序依次切换不同的镜头视角，形成流畅的蒙太奇剪辑效果
-- 镜头切换：每个面板视角停留约{secondsPerPanel}秒，通过自然的镜头运动（推拉摇移、切换）过渡到下一个视角
-- 整体镜头运动：{cameraMovement}
-- 运动：确保镜头切换流畅自然，保持叙事连贯性
-- 角色一致性：全程保持角色外观（面部、发型、服装）完全一致
-- 视觉风格：电影质感，全程保持一致的光照和色调
-- 语言：配音和字幕使用中文`,
+⛔ FORBIDDEN: Do NOT show the grid image, grid lines, thumbnail collection, or multi-panel layout in ANY frame.
 
-    english: `⚠️ HIGHEST PRIORITY INSTRUCTION ⚠️: The provided reference image is a 3x3 storyboard grid used ONLY as shot-planning metadata. It is ABSOLUTELY FORBIDDEN to display this grid image anywhere in the video. The very first frame MUST be the actual full-screen scene described in Panel 1 — NOT the grid, NOT a thumbnail, NOT the storyboard, but the ACTUAL SCENE from Panel 1.
+The 9 panels in the reference grid (left-to-right, top-to-bottom = Panel 1→9) represent 9 different camera angles. The video should start with Panel 1's full-screen shot, then transition through each angle sequentially to Panel 9 as a smooth montage.
 
-⛔ ABSOLUTE PROHIBITIONS (violating ANY of these means FAILURE):
-1. DO NOT show the nine-grid storyboard image in the first frame, last frame, or ANY frame of the video
-2. DO NOT show any image containing grid lines, dividers, or multi-panel storyboard-style layouts in the video
-3. DO NOT use the reference image as an opening shot, transition, or background in the video
-4. DO NOT display any thumbnail collection, image collage, or side-by-side multi-frame composition
+Starting angle (Panel 1): {panel1Description}
 
-✅ CORRECT APPROACH:
-The video MUST begin directly with the full-screen scene described in Panel 1 (like the opening shot of a real film), then transition through each panel's camera angle in order (Panel 1 through 9, left to right, top to bottom).
-
-Action Description: {actionSummary}
-
-Storyboard Panel Breakdown (for shot planning reference ONLY — do NOT display this breakdown visually in the video):
-{panelDescriptions}
-
-Technical Requirements:
-- [HIGHEST PRIORITY] The very first frame of the video MUST be the full-screen shot described in Panel 1, like the opening shot of a cinematic film. REITERATE: ABSOLUTELY DO NOT show the nine-grid storyboard image, thumbnail collection, or ANY grid-style composition at the beginning or anywhere in the video!
-- [HIGH PRIORITY] This is a STORYBOARD reference — do NOT animate each grid cell independently! This is NOT a grid animation. Instead, transition through the camera angles of panels 1→9 sequentially, creating a smooth montage-style edit
-- Shot Pacing: Each panel's angle should last approximately {secondsPerPanel} seconds, with natural camera movements (pan, tilt, dolly, cut) transitioning to the next angle
-- Overall Camera Movement: {cameraMovement}
-- Motion: Ensure smooth and natural shot transitions, maintaining narrative continuity
-- Character Consistency: Maintain identical character appearance (face, hair, clothing) throughout
-- Visual Style: Cinematic quality with consistent lighting and color tone throughout
-- Language: Use {language} for voiceover and subtitles`
+Action: {actionSummary}
+Camera Movement: {cameraMovement}
+Each angle lasts ~{secondsPerPanel}s. Maintain character consistency, cinematic quality. Language: {language}.`
   },
 
   veo: {
