@@ -77,24 +77,20 @@ const checkApiKey = (type: 'chat' | 'image' | 'video' = 'chat', modelId?: string
   // 优先使用指定模型（若提供）或当前激活模型的 API Key（包括模型专属 Key 和提供商 Key）
   const resolvedModel = resolveModel(type, modelId);
   console.log(`[checkApiKey] type=${type}, modelId=${modelId}, resolvedModel=`, resolvedModel?.id, resolvedModel?.providerId);
-  logScriptProgress('正在检查 API Key...');
   
   if (resolvedModel) {
     const modelApiKey = getApiKeyForModel(resolvedModel.id);
     console.log(`[checkApiKey] modelApiKey found:`, !!modelApiKey, modelApiKey ? '(has key)' : '(no key)');
-    logScriptProgress(modelApiKey ? 'API Key 已就绪' : '未找到模型专属 API Key，尝试使用全局配置');
     if (modelApiKey) return modelApiKey;
   }
   
   // 其次使用全局 API Key
   const registryKey = getRegistryApiKey();
   console.log(`[checkApiKey] registryKey found:`, !!registryKey);
-  logScriptProgress(registryKey ? '已找到全局 API Key' : '未找到全局 API Key');
   if (registryKey) return registryKey;
   
   // 最后使用运行时 Key（向后兼容）
   console.log(`[checkApiKey] runtimeApiKey found:`, !!runtimeApiKey);
-  logScriptProgress(runtimeApiKey ? '已找到运行时 API Key' : '未找到运行时 API Key');
   if (!runtimeApiKey) throw new ApiKeyError("API Key 缺失，请在模型配置中设置 API Key。");
   return runtimeApiKey;
 };
