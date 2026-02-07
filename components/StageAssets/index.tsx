@@ -188,7 +188,12 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError })
 
       // 添加地域特征前缀
       const regionalPrefix = getRegionalPrefix(language, type);
-      const enhancedPrompt = regionalPrefix + prompt;
+      let enhancedPrompt = regionalPrefix + prompt;
+
+      // 场景图片：追加"纯环境/无人物"指令，避免生成人物干扰角色一致性
+      if (type === 'scene') {
+        enhancedPrompt += '. IMPORTANT: This is a pure environment/background scene with absolutely NO people, NO human figures, NO characters, NO silhouettes, NO crowds - empty scene only.';
+      }
 
       // 生成图片（使用选择的横竖屏比例）
       const imageUrl = await generateImage(enhancedPrompt, [], aspectRatio);
