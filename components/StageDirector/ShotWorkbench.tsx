@@ -163,66 +163,6 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
           />
         )}
 
-        {/* Narrative Section */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 border-b border-[var(--border-primary)] pb-2">
-            <Film className="w-4 h-4 text-[var(--text-tertiary)]" />
-            <h4 className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-widest">
-              叙事动作 (Action & Dialogue)
-            </h4>
-            <div className="ml-auto flex items-center gap-1">
-              <button 
-                onClick={onSplitShot}
-                disabled={isSplittingShot}
-                className="p-1 text-[var(--success-text)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="AI拆分镜头"
-              >
-                {isSplittingShot ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <Scissors className="w-3 h-3" />
-                )}
-              </button>
-              <button 
-                onClick={onGenerateAIAction}
-                disabled={isAIOptimizing}
-                className="p-1 text-[var(--accent-text)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="AI生成动作建议"
-              >
-                {isAIOptimizing ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <Sparkles className="w-3 h-3" />
-                )}
-              </button>
-              <button 
-                onClick={onEditActionSummary}
-                className="p-1 text-[var(--warning-text)] hover:text-[var(--text-primary)] transition-colors"
-                title="编辑叙事动作"
-              >
-                <Edit2 className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-          
-          <div className="space-y-3 max-h-[200px] overflow-y-auto custom-scrollbar">
-            <div className="bg-[var(--bg-surface)] p-4 rounded-lg border border-[var(--border-primary)]">
-              <p className="text-[var(--text-secondary)] text-sm leading-relaxed">{shot.actionSummary}</p>
-            </div>
-            
-            {shot.dialogue && (
-              <div className="bg-[var(--bg-surface)] p-4 rounded-lg border border-[var(--border-primary)] flex gap-3">
-                <MessageSquare className="w-4 h-4 text-[var(--text-muted)] mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-[var(--text-tertiary)] text-xs italic leading-relaxed">
-                    "{shot.dialogue}"
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Nine Grid Storyboard Preview - Advanced Feature (不在 veo 首尾帧模式下显示) */}
         {currentVideoModelId !== 'veo' && (
         <div className="space-y-3">
@@ -298,6 +238,66 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
           onCopyNext={onCopyNextStartFrame}
           onImageClick={onImageClick}
         />
+
+        {/* Narrative Section - 叙事动作作为视频提示词，放在视觉制作之后、视频生成之前 */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 border-b border-[var(--border-primary)] pb-2">
+            <Film className="w-4 h-4 text-[var(--text-tertiary)]" />
+            <h4 className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-widest">
+              叙事动作 (Action & Dialogue)
+            </h4>
+            <div className="ml-auto flex items-center gap-1">
+              <button 
+                onClick={onSplitShot}
+                disabled={isSplittingShot}
+                className="p-1 text-[var(--success-text)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="AI拆分镜头"
+              >
+                {isSplittingShot ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Scissors className="w-3 h-3" />
+                )}
+              </button>
+              <button 
+                onClick={onGenerateAIAction}
+                disabled={isAIOptimizing}
+                className="p-1 text-[var(--accent-text)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="AI生成动作建议"
+              >
+                {isAIOptimizing ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3 h-3" />
+                )}
+              </button>
+              <button 
+                onClick={onEditActionSummary}
+                className="p-1 text-[var(--warning-text)] hover:text-[var(--text-primary)] transition-colors"
+                title="编辑叙事动作"
+              >
+                <Edit2 className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+          
+          <div className="space-y-3 max-h-[200px] overflow-y-auto custom-scrollbar">
+            <div className="bg-[var(--bg-surface)] p-4 rounded-lg border border-[var(--border-primary)]">
+              <p className="text-[var(--text-secondary)] text-sm leading-relaxed">{shot.actionSummary}</p>
+            </div>
+            
+            {shot.dialogue && (
+              <div className="bg-[var(--bg-surface)] p-4 rounded-lg border border-[var(--border-primary)] flex gap-3">
+                <MessageSquare className="w-4 h-4 text-[var(--text-muted)] mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-[var(--text-tertiary)] text-xs italic leading-relaxed">
+                    "{shot.dialogue}"
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Video Generation */}
         <VideoGenerator
