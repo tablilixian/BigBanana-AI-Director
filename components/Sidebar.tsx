@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Users, Clapperboard, Film, ChevronLeft, ListTree, HelpCircle, Cpu, Sun, Moon } from 'lucide-react';
+import { FileText, Users, Clapperboard, Film, ChevronLeft, ListTree, HelpCircle, Cpu, Sun, Moon, Loader2 } from 'lucide-react';
 import logoImg from '../logo.png';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -10,9 +10,10 @@ interface SidebarProps {
   projectName?: string;
   onShowOnboarding?: () => void;
   onShowModelConfig?: () => void;
+  isNavigationLocked?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, projectName, onShowOnboarding, onShowModelConfig }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, projectName, onShowOnboarding, onShowModelConfig, isNavigationLocked }) => {
   const { theme, toggleTheme } = useTheme();
   const navItems = [
     { id: 'script', label: '剧本与故事', icon: FileText, sub: 'Phase 01' },
@@ -41,7 +42,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, proje
 
         <button 
           onClick={onExit}
-          className="flex items-center gap-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors text-xs font-mono uppercase tracking-wide group"
+          className={`flex items-center gap-2 transition-colors text-xs font-mono uppercase tracking-wide group ${
+            isNavigationLocked 
+              ? 'text-[var(--text-muted)] opacity-50 cursor-not-allowed' 
+              : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+          }`}
+          title={isNavigationLocked ? '生成任务进行中，退出将导致数据丢失' : undefined}
         >
           <ChevronLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" />
           返回项目列表
@@ -54,10 +60,24 @@ const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, proje
          <div className="text-sm font-medium text-[var(--text-secondary)] truncate font-mono">{projectName || '未命名项目'}</div>
       </div>
 
+      {/* Generation Lock Indicator */}
+      {isNavigationLocked && (
+        <div className="mx-4 mt-4 px-3 py-2.5 rounded-lg bg-[var(--warning)]/10 border border-[var(--warning)]/30">
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-3.5 h-3.5 text-[var(--warning)] animate-spin flex-shrink-0" />
+            <span className="text-[10px] font-medium text-[var(--warning)] uppercase tracking-wide">生成任务进行中</span>
+          </div>
+          <p className="text-[10px] text-[var(--text-muted)] mt-1 leading-relaxed">
+            切换页面将导致数据丢失
+          </p>
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 py-6 space-y-1">
         {navItems.map((item) => {
           const isActive = currentStage === item.id;
+          const isLocked = isNavigationLocked && !isActive;
           return (
             <button
               key={item.id}
@@ -65,11 +85,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, proje
               className={`w-full flex items-center justify-between px-6 py-4 transition-all duration-200 group relative border-l-2 ${
                 isActive 
                   ? 'border-[var(--text-primary)] bg-[var(--nav-active-bg)] text-[var(--text-primary)]'
-                  : 'border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)]'
+                  : isLocked
+                    ? 'border-transparent text-[var(--text-muted)] opacity-50 cursor-not-allowed'
+                    : 'border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--nav-hover-bg)]'
               }`}
+              title={isLocked ? '生成任务进行中，切换页面将导致数据丢失' : undefined}
             >
               <div className="flex items-center gap-3">
-                <item.icon className={`w-4 h-4 ${isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]'}`} />
+                <item.icon className={`w-4 h-4 ${isActive ? 'text-[var(--text-primary)]' : isLocked ? 'text-[var(--text-muted)]' : 'text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]'}`} />
                 <span className="font-medium text-xs tracking-wider uppercase">{item.label}</span>
               </div>
               <span className={`text-[10px] font-mono ${isActive ? 'text-[var(--text-tertiary)]' : 'text-[var(--text-muted)]'}`}>{item.sub}</span>

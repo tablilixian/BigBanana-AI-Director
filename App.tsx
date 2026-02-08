@@ -13,9 +13,11 @@ import { Save, CheckCircle, X } from 'lucide-react';
 import { saveProjectToDB } from './services/storageService';
 import { setGlobalApiKey } from './services/geminiService';
 import { setLogCallback, clearLogCallback } from './services/renderLogService';
+import { useAlert } from './components/GlobalAlert';
 import logoImg from './logo.png';
 
 function App() {
+  const { showAlert } = useAlert();
   const [project, setProject] = useState<ProjectState | null>(null);
   const [apiKey, setApiKey] = useState<string>('');
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
@@ -24,6 +26,7 @@ function App() {
   const [isMobile, setIsMobile] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showModelConfig, setShowModelConfig] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   
   // Ref to hold debounce timer
   const saveTimeoutRef = useRef<any>(null);
@@ -198,6 +201,20 @@ function App() {
   };
 
   const setStage = (stage: 'script' | 'assets' | 'director' | 'export' | 'prompts') => {
+    if (isGenerating) {
+      showAlert('当前正在执行生成任务（剧本分镜 / 首帧 / 视频等），切换页面会导致生成数据丢失，且已扣除的费用无法恢复。\n\n确定要离开当前页面吗？', {
+        title: '生成任务进行中',
+        type: 'warning',
+        showCancel: true,
+        confirmText: '确定离开',
+        cancelText: '继续等待',
+        onConfirm: () => {
+          setIsGenerating(false);
+          updateProject({ stage });
+        }
+      });
+      return;
+    }
     updateProject({ stage });
   };
 
@@ -206,6 +223,23 @@ function App() {
   };
 
   const handleExitProject = async () => {
+    if (isGenerating) {
+      showAlert('当前正在执行生成任务（剧本分镜 / 首帧 / 视频等），退出项目会导致生成数据丢失，且已扣除的费用无法恢复。\n\n确定要退出吗？', {
+        title: '生成任务进行中',
+        type: 'warning',
+        showCancel: true,
+        confirmText: '确定退出',
+        cancelText: '继续等待',
+        onConfirm: async () => {
+          setIsGenerating(false);
+          if (project) {
+            await saveProjectToDB(project);
+          }
+          setProject(null);
+        }
+      });
+      return;
+    }
     // Force save before exiting
     if (project) {
         await saveProjectToDB(project);
@@ -222,12 +256,13 @@ function App() {
             project={project}
             updateProject={updateProject}
             onShowModelConfig={handleShowModelConfig}
+            onGeneratingChange={setIsGenerating}
           />
         );
       case 'assets':
-        return <StageAssets project={project} updateProject={updateProject} />;
+        return <StageAssets project={project} updateProject={updateProject} onGeneratingChange={setIsGenerating} />;
       case 'director':
-        return <StageDirector project={project} updateProject={updateProject} />;
+        return <StageDirector project={project} updateProject={updateProject} onGeneratingChange={setIsGenerating} />;
       case 'export':
         return <StageExport project={project} />;
       case 'prompts':
@@ -297,6 +332,7 @@ function App() {
         projectName={project.title}
         onShowOnboarding={handleShowOnboarding}
         onShowModelConfig={() => setShowModelConfig(true)}
+        isNavigationLocked={isGenerating}
       />
       
       <main className="ml-72 flex-1 h-screen overflow-hidden relative">

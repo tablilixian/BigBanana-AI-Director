@@ -11,11 +11,12 @@ interface Props {
   project: ProjectState;
   updateProject: (updates: Partial<ProjectState> | ((prev: ProjectState) => ProjectState)) => void;
   onShowModelConfig?: () => void;
+  onGeneratingChange?: (isGenerating: boolean) => void;
 }
 
 type TabMode = 'story' | 'script';
 
-const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfig }) => {
+const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfig, onGeneratingChange }) => {
   const [activeTab, setActiveTab] = useState<TabMode>(project.scriptData ? 'script' : 'story');
   
   // Configuration state
@@ -55,6 +56,19 @@ const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfi
     setLocalModel(project.shotGenerationModel || DEFAULTS.model);
     setLocalVisualStyle(project.visualStyle || DEFAULTS.visualStyle);
   }, [project.id]);
+
+  // 上报生成状态给父组件，用于导航锁定
+  useEffect(() => {
+    const generating = isProcessing || isContinuing || isRewriting;
+    onGeneratingChange?.(generating);
+  }, [isProcessing, isContinuing, isRewriting]);
+
+  // 组件卸载时重置生成状态
+  useEffect(() => {
+    return () => {
+      onGeneratingChange?.(false);
+    };
+  }, []);
 
   useEffect(() => {
     setScriptLogCallback((message) => {

@@ -38,19 +38,44 @@ export const getRefImagesForShot = (shot: Shot, scriptData: ProjectState['script
       }
     });
   }
+
+  // 3. 道具参考图（物品一致性）
+  if (shot.props && scriptData.props) {
+    shot.props.forEach(propId => {
+      const prop = scriptData.props.find(p => String(p.id) === String(propId));
+      if (prop?.referenceImage) {
+        referenceImages.push(prop.referenceImage);
+      }
+    });
+  }
   
   return referenceImages;
 };
 
 /**
+ * 获取镜头关联的道具信息（用于提示词注入）
+ * hasImage 标记该道具是否有参考图，用于提示词中区分"参考图一致性"和"文字描述约束"
+ */
+export const getPropsInfoForShot = (shot: Shot, scriptData: ProjectState['scriptData']): { name: string; description: string; hasImage: boolean }[] => {
+  if (!scriptData || !shot.props || !scriptData.props) return [];
+  
+  return shot.props
+    .map(propId => scriptData.props.find(p => String(p.id) === String(propId)))
+    .filter((p): p is NonNullable<typeof p> => !!p)
+    .map(p => ({ name: p.name, description: p.description || p.visualPrompt || '', hasImage: !!p.referenceImage }));
+};
+
+/**
  * 构建关键帧提示词 - 简化版
  * 为起始帧和结束帧生成基础的视觉描述
+ * @param propsInfo - 可选，镜头关联的道具信息列表
  */
 export const buildKeyframePrompt = (
   basePrompt: string,
   visualStyle: string,
   cameraMovement: string,
-  frameType: 'start' | 'end'
+  frameType: 'start' | 'end',
+  propsInfo?: { name: string; description: string; hasImage: boolean }[]
 ): string => {
   const stylePrompt = VISUAL_STYLE_PROMPTS[visualStyle] || visualStyle;
   const cameraGuide = getCameraMovementCompositionGuide(cameraMovement, frameType);
@@ -69,6 +94,41 @@ export const buildKeyframePrompt = (
 • 体型特征: 身材比例、身高体型必须保持一致
 ⚠️ 这是最高优先级要求,不可妥协!`;
 
+  // 道具一致性要求（仅在有道具时添加）
+  let propConsistencyGuide = '';
+  if (propsInfo && propsInfo.length > 0) {
+    const propsWithImage = propsInfo.filter(p => p.hasImage);
+    const propsWithoutImage = propsInfo.filter(p => !p.hasImage);
+
+    let sections: string[] = [];
+
+    // 有参考图的道具：要求严格遵循参考图
+    if (propsWithImage.length > 0) {
+      const list = propsWithImage.map(p => `- ${p.name}: ${p.description}`).join('\n');
+      sections.push(`⚠️ 以下道具已提供参考图,画面中出现时必须严格遵循参考图:
+• 外形特征: 道具的形状、大小、比例必须与参考图一致
+• 颜色材质: 颜色、材质、纹理必须保持一致
+• 细节元素: 图案、文字、装饰细节必须与参考图匹配
+⚠️ 这是高优先级要求!
+
+有参考图的道具:
+${list}`);
+    }
+
+    // 无参考图的道具：仅文字描述约束
+    if (propsWithoutImage.length > 0) {
+      const list = propsWithoutImage.map(p => `- ${p.name}: ${p.description}`).join('\n');
+      sections.push(`以下道具无参考图,请根据文字描述准确呈现:
+${list}`);
+    }
+
+    propConsistencyGuide = `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【道具一致性要求】PROP CONSISTENCY REQUIREMENTS
+${sections.join('\n\n')}`;
+  }
+
   return `${basePrompt}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -85,7 +145,7 @@ ${cameraGuide}
 ${frameSpecificGuide}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${characterConsistencyGuide}`;
+${characterConsistencyGuide}${propConsistencyGuide}`;
 };
 
 /**
@@ -96,6 +156,7 @@ ${characterConsistencyGuide}`;
  * @param cameraMovement - 镜头运动
  * @param frameType - 帧类型
  * @param enhanceWithAI - 是否使用AI增强(默认true)
+ * @param propsInfo - 可选，镜头关联的道具信息列表
  * @returns 返回完整的提示词或Promise
  */
 export const buildKeyframePromptWithAI = async (
@@ -103,10 +164,11 @@ export const buildKeyframePromptWithAI = async (
   visualStyle: string,
   cameraMovement: string,
   frameType: 'start' | 'end',
-  enhanceWithAI: boolean = true
+  enhanceWithAI: boolean = true,
+  propsInfo?: { name: string; description: string; hasImage: boolean }[]
 ): Promise<string> => {
   // 先构建基础提示词
-  const basicPrompt = buildKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType);
+  const basicPrompt = buildKeyframePrompt(basePrompt, visualStyle, cameraMovement, frameType, propsInfo);
   
   // 如果不需要AI增强,直接返回基础提示词
   if (!enhanceWithAI) {
@@ -364,7 +426,8 @@ export const buildPromptFromNineGridPanel = (
   panel: NineGridPanel,
   actionSummary: string,
   visualStyle: string,
-  cameraMovement: string
+  cameraMovement: string,
+  propsInfo?: { name: string; description: string; hasImage: boolean }[]
 ): string => {
   const stylePrompt = VISUAL_STYLE_PROMPTS[visualStyle] || visualStyle;
   
@@ -376,6 +439,39 @@ export const buildPromptFromNineGridPanel = (
 • 服装造型: 服装的款式、颜色、材质、配饰必须与参考图匹配
 • 体型特征: 身材比例、身高体型必须保持一致
 ⚠️ 这是最高优先级要求,不可妥协!`;
+
+  // 道具一致性要求（仅在有道具时添加）
+  let propConsistencyGuide = '';
+  if (propsInfo && propsInfo.length > 0) {
+    const propsWithImage = propsInfo.filter(p => p.hasImage);
+    const propsWithoutImage = propsInfo.filter(p => !p.hasImage);
+
+    let sections: string[] = [];
+
+    if (propsWithImage.length > 0) {
+      const list = propsWithImage.map(p => `- ${p.name}: ${p.description}`).join('\n');
+      sections.push(`⚠️ 以下道具已提供参考图,画面中出现时必须严格遵循参考图:
+• 外形特征: 道具的形状、大小、比例必须与参考图一致
+• 颜色材质: 颜色、材质、纹理必须保持一致
+• 细节元素: 图案、文字、装饰细节必须与参考图匹配
+⚠️ 这是高优先级要求!
+
+有参考图的道具:
+${list}`);
+    }
+
+    if (propsWithoutImage.length > 0) {
+      const list = propsWithoutImage.map(p => `- ${p.name}: ${p.description}`).join('\n');
+      sections.push(`以下道具无参考图,请根据文字描述准确呈现:
+${list}`);
+    }
+
+    propConsistencyGuide = `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【道具一致性要求】PROP CONSISTENCY REQUIREMENTS
+${sections.join('\n\n')}`;
+  }
 
   return `${panel.description}
 
@@ -394,7 +490,7 @@ ${stylePrompt}
 ${cameraMovement}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${characterConsistencyGuide}`;
+${characterConsistencyGuide}${propConsistencyGuide}`;
 };
 
 /**
