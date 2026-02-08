@@ -81,7 +81,10 @@ export interface NineGridData {
   panels: NineGridPanel[];  // 9个格子的描述数据
   imageUrl?: string;        // 生成的九宫格图片 (base64)
   prompt?: string;          // 生成时使用的完整提示词
-  status: 'pending' | 'generating' | 'completed' | 'failed';
+  status: 'pending' | 'generating_panels' | 'panels_ready' | 'generating_image' | 'completed' | 'failed';
+  // generating_panels: AI正在生成9个镜头描述
+  // panels_ready: 镜头描述已生成，等待用户确认/编辑后再生成图片
+  // generating_image: 用户已确认，正在生成九宫格图片
 }
 
 export interface Shot {

@@ -76,7 +76,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError 
     const hasStuckGenerating = project.shots.some(shot => {
       const stuckKeyframes = shot.keyframes?.some(kf => kf.status === 'generating' && !kf.imageUrl);
       const stuckVideo = shot.interval?.status === 'generating' && !shot.interval?.videoUrl;
-      const stuckNineGrid = shot.nineGrid?.status === 'generating' && !shot.nineGrid?.imageUrl;
+      const stuckNineGrid = (shot.nineGrid?.status === 'generating_panels' || shot.nineGrid?.status === 'generating_image' || (shot.nineGrid?.status as string) === 'generating') && !shot.nineGrid?.imageUrl;
       return stuckKeyframes || stuckVideo || stuckNineGrid;
     });
 
@@ -94,7 +94,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError 
           interval: shot.interval && shot.interval.status === 'generating' && !shot.interval.videoUrl
             ? { ...shot.interval, status: 'failed' as const }
             : shot.interval,
-          nineGrid: shot.nineGrid && shot.nineGrid.status === 'generating' && !shot.nineGrid.imageUrl
+          nineGrid: shot.nineGrid && (shot.nineGrid.status === 'generating_panels' || shot.nineGrid.status === 'generating_image' || (shot.nineGrid.status as string) === 'generating') && !shot.nineGrid.imageUrl
             ? { ...shot.nineGrid, status: 'failed' as const }
             : shot.nineGrid
         }))
@@ -710,8 +710,8 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError 
   };
 
   /**
-   * 九宫格分镜预览 - 生成九宫格
-   * 使用 AI 将镜头拆分为 9 个不同视角，然后生成九宫格图片
+   * 九宫格分镜预览 - 第一步：生成镜头描述
+   * 使用 AI 将镜头拆分为 9 个不同视角的文字描述，等待用户确认/编辑后再生成图片
    */
   const handleGenerateNineGrid = async (shot: Shot) => {
     if (!shot) return;
@@ -734,18 +734,18 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError 
     
     const visualStyle = project.visualStyle || project.scriptData?.visualStyle || 'live-action';
     
-    // 3. 显示弹窗并设置生成状态
+    // 3. 显示弹窗并设置生成状态（仅生成面板描述）
     setShowNineGrid(true);
     updateShot(shot.id, (s) => ({
       ...s,
       nineGrid: {
         panels: [],
-        status: 'generating' as const
+        status: 'generating_panels' as const
       }
     }));
     
     try {
-      // 4. 调用 AI 拆分镜头为 9 个视角
+      // 4. 调用 AI 拆分镜头为 9 个视角（仅文字描述，不生成图片）
       const panels = await generateNineGridPanels(
         shot.actionSummary,
         shot.cameraMovement,
@@ -758,25 +758,19 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError 
         visualStyle
       );
       
-      // 5. 收集参考图片
-      const referenceImages = getRefImagesForShot(shot, project.scriptData);
-      
-      // 6. 生成九宫格图片
-      const imageUrl = await generateNineGridImage(panels, referenceImages, visualStyle, keyframeAspectRatio);
-      
-      // 7. 更新状态为完成
+      // 5. 更新状态为 panels_ready，等待用户确认
       updateShot(shot.id, (s) => ({
         ...s,
         nineGrid: {
           panels,
-          imageUrl,
-          prompt: `Nine Grid Storyboard - ${shot.actionSummary}`,
-          status: 'completed' as const
+          status: 'panels_ready' as const
         }
       }));
       
+      showAlert('9个镜头描述已生成，请检查并编辑后确认生成图片', { type: 'success' });
+      
     } catch (e: any) {
-      console.error('九宫格生成失败:', e);
+      console.error('九宫格镜头描述生成失败:', e);
       updateShot(shot.id, (s) => ({
         ...s,
         nineGrid: {
@@ -786,8 +780,81 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError 
       }));
       
       if (onApiKeyError && onApiKeyError(e)) return;
-      showAlert(`九宫格生成失败: ${e.message}`, { type: 'error' });
+      showAlert(`镜头描述生成失败: ${e.message}`, { type: 'error' });
     }
+  };
+
+  /**
+   * 九宫格分镜预览 - 第二步：确认并生成图片
+   * 用户确认/编辑完面板描述后，调用图片生成 API 生成九宫格图片
+   */
+  const handleConfirmNineGridPanels = async (confirmedPanels: NineGridPanel[]) => {
+    if (!activeShot) return;
+    
+    const visualStyle = project.visualStyle || project.scriptData?.visualStyle || 'live-action';
+    
+    // 1. 更新面板数据并设置生成图片状态
+    updateShot(activeShot.id, (s) => ({
+      ...s,
+      nineGrid: {
+        panels: confirmedPanels,
+        status: 'generating_image' as const
+      }
+    }));
+    
+    try {
+      // 2. 收集参考图片
+      const referenceImages = getRefImagesForShot(activeShot, project.scriptData);
+      
+      // 3. 生成九宫格图片
+      const imageUrl = await generateNineGridImage(confirmedPanels, referenceImages, visualStyle, keyframeAspectRatio);
+      
+      // 4. 更新状态为完成
+      updateShot(activeShot.id, (s) => ({
+        ...s,
+        nineGrid: {
+          panels: confirmedPanels,
+          imageUrl,
+          prompt: `Nine Grid Storyboard - ${activeShot.actionSummary}`,
+          status: 'completed' as const
+        }
+      }));
+      
+      showAlert('九宫格分镜图片生成完成！', { type: 'success' });
+      
+    } catch (e: any) {
+      console.error('九宫格图片生成失败:', e);
+      updateShot(activeShot.id, (s) => ({
+        ...s,
+        nineGrid: {
+          panels: confirmedPanels,
+          status: 'failed' as const
+        }
+      }));
+      
+      if (onApiKeyError && onApiKeyError(e)) return;
+      showAlert(`九宫格图片生成失败: ${e.message}`, { type: 'error' });
+    }
+  };
+
+  /**
+   * 九宫格分镜预览 - 更新单个面板描述（用户在弹窗中编辑）
+   */
+  const handleUpdateNineGridPanel = (index: number, updatedPanel: Partial<NineGridPanel>) => {
+    if (!activeShot || !activeShot.nineGrid) return;
+    
+    updateShot(activeShot.id, (s) => {
+      if (!s.nineGrid) return s;
+      const newPanels = [...s.nineGrid.panels];
+      newPanels[index] = { ...newPanels[index], ...updatedPanel };
+      return {
+        ...s,
+        nineGrid: {
+          ...s.nineGrid,
+          panels: newPanels
+        }
+      };
+    });
   };
 
   /**
@@ -1044,6 +1111,8 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError 
           onSelectPanel={handleSelectNineGridPanel}
           onUseWholeImage={handleUseWholeNineGridAsFrame}
           onRegenerate={() => handleGenerateNineGrid(activeShot)}
+          onConfirmPanels={handleConfirmNineGridPanels}
+          onUpdatePanel={handleUpdateNineGridPanel}
           aspectRatio={keyframeAspectRatio}
         />
       )}

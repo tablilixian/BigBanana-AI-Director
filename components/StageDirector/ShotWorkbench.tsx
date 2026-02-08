@@ -168,21 +168,38 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <button
-              onClick={nineGrid?.status === 'completed' ? onShowNineGrid : onGenerateNineGrid}
-              disabled={nineGrid?.status === 'generating'}
+              onClick={
+                nineGrid?.status === 'completed' || nineGrid?.status === 'panels_ready' || nineGrid?.status === 'generating_image'
+                  ? onShowNineGrid 
+                  : onGenerateNineGrid
+              }
+              disabled={nineGrid?.status === 'generating_panels' || nineGrid?.status === 'generating_image'}
               className={`flex-1 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 border ${
-                nineGrid?.status === 'generating'
+                nineGrid?.status === 'generating_panels' || nineGrid?.status === 'generating_image'
                   ? 'bg-[var(--bg-surface)] text-[var(--text-muted)] border-[var(--border-primary)] cursor-wait'
                   : nineGrid?.status === 'completed'
                     ? 'bg-[var(--success-bg)] text-[var(--success-text)] border-[var(--success-border)] hover:bg-[var(--success-hover-bg)]'
-                    : 'bg-[var(--bg-surface)] text-[var(--text-tertiary)] border-[var(--border-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-primary)] hover:bg-[var(--bg-hover)]'
+                    : nineGrid?.status === 'panels_ready'
+                      ? 'bg-[var(--warning-bg)] text-[var(--warning-text)] border-[var(--warning-border)] hover:bg-[var(--warning-hover-bg)]'
+                      : 'bg-[var(--bg-surface)] text-[var(--text-tertiary)] border-[var(--border-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-primary)] hover:bg-[var(--bg-hover)]'
               }`}
               title="九宫格分镜预览 - 使用AI将镜头拆分为9个不同视角的预览图"
             >
-              {nineGrid?.status === 'generating' ? (
+              {nineGrid?.status === 'generating_panels' ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>九宫格生成中...</span>
+                  <span>镜头描述生成中...</span>
+                </>
+              ) : nineGrid?.status === 'generating_image' ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>九宫格图片生成中...</span>
+                </>
+              ) : nineGrid?.status === 'panels_ready' ? (
+                <>
+                  <Grid3x3 className="w-3.5 h-3.5" />
+                  <span>查看/确认镜头描述</span>
+                  <span className="ml-1 px-1.5 py-0.5 bg-[var(--warning-text)]/10 rounded text-[8px]">待确认</span>
                 </>
               ) : nineGrid?.status === 'completed' ? (
                 <>
