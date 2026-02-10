@@ -332,7 +332,7 @@ export const BUILTIN_VIDEO_MODELS: VideoModelDefinition[] = [
     type: 'video',
     providerId: 'antsk',
     endpoint: '/v1/videos',
-    description: '异步模式，支持横屏/竖屏，固定 8 秒时长',
+    description: '异步模式，支持横屏/竖屏、首尾帧，固定 8 秒时长,价格便宜速度快',
     isBuiltIn: true,
     isEnabled: true,
     params: { ...DEFAULT_VIDEO_PARAMS_VEO_FAST },

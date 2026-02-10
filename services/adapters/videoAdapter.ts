@@ -228,15 +228,21 @@ const callSoraApi = async (
   const aspectRatio = options.aspectRatio || model.params.defaultAspectRatio;
   const duration = options.duration || model.params.defaultDuration;
   const apiModel = model.apiModel || model.id;
-  const supportsReferenceArray = apiModel === 'veo_3_1-fast';
+  const references = [options.startImage, options.endImage].filter(Boolean) as string[];
+  const useReferenceArray = references.length >= 2;
+  const resolvedModel = useReferenceArray
+    ? 'veo_3_1-fast'
+    : references.length === 1
+      ? 'sora-2'
+      : apiModel;
   
   const { width, height, size } = getSizeFromAspectRatio(aspectRatio);
 
-  console.log(`🎬 使用异步模式生成视频 (${apiModel}, ${aspectRatio}, ${duration}秒)...`);
+  console.log(`🎬 使用异步模式生成视频 (${resolvedModel}, ${aspectRatio}, ${duration}秒)...`);
 
   // 创建任务
   const formData = new FormData();
-  formData.append('model', apiModel);
+  formData.append('model', resolvedModel);
   formData.append('prompt', options.prompt);
   formData.append('seconds', String(duration));
   formData.append('size', size);
@@ -254,16 +260,12 @@ const callSoraApi = async (
     formData.append(fieldName, blob, filename);
   };
 
-  // 添加参考图片（sora-2: 单图；veo_3_1-fast: 支持首尾帧数组）
-  if (supportsReferenceArray) {
-    if (options.startImage) {
-      await appendReference(options.startImage, 'reference-start.png', 'input_reference[]');
-    }
-    if (options.endImage) {
-      await appendReference(options.endImage, 'reference-end.png', 'input_reference[]');
-    }
-  } else if (options.startImage) {
-    await appendReference(options.startImage, 'reference.png', 'input_reference');
+  // 添加参考图片（单图走 sora-2，双图走 veo_3_1-fast）
+  if (useReferenceArray) {
+    await appendReference(references[0], 'reference-start.png', 'input_reference[]');
+    await appendReference(references[1], 'reference-end.png', 'input_reference[]');
+  } else if (references.length === 1) {
+    await appendReference(references[0], 'reference.png', 'input_reference');
   }
 
   // 创建任务请求
