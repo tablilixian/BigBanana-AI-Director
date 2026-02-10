@@ -38,6 +38,10 @@ const generateVideoAsync = async (
   const resolvedModelName = modelName || 'sora-2';
   const useReferenceArray = resolvedModelName === 'veo_3_1-fast';
 
+  if (resolvedModelName === 'sora-2' && references.length >= 2) {
+    throw new Error('Sora-2 不支持首尾帧模式，请只传一张参考图。');
+  }
+
   console.log(`🎬 使用异步模式生成视频 (${resolvedModelName}, ${aspectRatio}, ${duration}秒)...`);
 
   const videoSize = getSoraVideoSize(aspectRatio);

@@ -231,6 +231,10 @@ const callSoraApi = async (
   const references = [options.startImage, options.endImage].filter(Boolean) as string[];
   const resolvedModel = apiModel || 'sora-2';
   const useReferenceArray = resolvedModel === 'veo_3_1-fast';
+
+  if (resolvedModel === 'sora-2' && references.length >= 2) {
+    throw new Error('Sora-2 不支持首尾帧模式，请只传一张参考图。');
+  }
   
   const { width, height, size } = getSizeFromAspectRatio(aspectRatio);
 
