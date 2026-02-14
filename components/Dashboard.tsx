@@ -406,7 +406,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
             <div className="space-y-4 text-center">
               <div className="text-[var(--text-primary)] text-sm font-bold tracking-widest uppercase">加入交流群</div>
               <div className="text-[10px] text-[var(--text-tertiary)] font-mono">扫码进入产品体验群</div>
-              <div className="bg-white p-3 inline-block">
+              <div className="inline-block">
                 <img src={qrCodeImg} alt="交流群二维码" className="w-64 h-64 object-contain" />
               </div>
               <div className="text-[10px] text-[var(--text-muted)] font-mono">二维码有效期请以实际为准</div>

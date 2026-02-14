@@ -10,8 +10,12 @@ const HighlightPage: React.FC<HighlightPageProps> = ({ onNext }) => {
     <div className="flex flex-col items-center text-center">
       {/* 标题 */}
       <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-8">
-        画面连贯，角色不变脸
+        新功能怎么用，一页看懂
       </h2>
+
+      <p className="text-[var(--text-tertiary)] text-sm mb-6 max-w-md">
+        重点功能已就位，按下面路径就能快速上手
+      </p>
 
       {/* 亮点说明 */}
       <div className="w-full max-w-md space-y-4 mb-8">
@@ -29,11 +33,16 @@ const HighlightPage: React.FC<HighlightPageProps> = ({ onNext }) => {
         ))}
       </div>
 
-      {/* 场景共鸣 */}
-      <div className="bg-[var(--accent-bg)] border border-[var(--accent-border)] rounded-xl px-6 py-4 mb-10 max-w-md">
-        <p className="text-[var(--text-secondary)] text-sm italic">
-          "拍一个换装变身的短剧，再也不怕角色走形了"
-        </p>
+      {/* 使用路径 */}
+      <div className="w-full max-w-md bg-[var(--accent-bg)] border border-[var(--accent-border)] rounded-xl px-6 py-4 mb-10 text-left">
+        <h3 className="text-xs font-bold text-[var(--text-primary)] mb-3 uppercase tracking-wider">
+          推荐使用路径
+        </h3>
+        <div className="space-y-2 text-[11px] text-[var(--text-secondary)] leading-relaxed">
+          <p>1. 在「导演工作台」点击「九宫格分镜预览」，先确认 9 个镜头描述再生成九宫格图。</p>
+          <p>2. 生成后可点击单个格子裁剪为首帧，也可直接使用整张九宫格图作为首帧。</p>
+          <p>3. 选择 Veo 系列模型时建议补齐首帧+尾帧；仅有首帧也可先生成单图视频。</p>
+        </div>
       </div>
 
       {/* 主按钮 */}
@@ -41,7 +50,7 @@ const HighlightPage: React.FC<HighlightPageProps> = ({ onNext }) => {
         onClick={onNext}
         className="px-8 py-3 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] font-bold text-sm rounded-lg hover:bg-[var(--btn-primary-hover)] transition-all duration-200 transform hover:scale-105"
       >
-        最后一步
+        继续下一步
       </button>
     </div>
   );

@@ -65,8 +65,11 @@ Traditional Text-to-Video models often struggle with specific camera movements a
 *   **Precise Control**:
     *   **Start Frame**: The strictly consistent starting image of the shot.
     *   **End Frame**: (Optional) Define the state at the end of the shot (e.g., character turns head, lighting shifts).
+*   **Nine-Grid Storyboard Preview (NEW)**:
+    *   Split one shot into 9 viewpoints, review/edit panel descriptions, then generate the 3x3 storyboard image.
+    *   Use the whole grid as the start frame, or crop a selected panel as the start frame.
 *   **Context Awareness**: When generating shots, the AI automatically reads the Context (Current Scene Image + Character's Specific Outfit Image) to solve continuity issues.
-*   **Veo Video Generation**: Supports both Image-to-Video and Keyframe Interpolation modes.
+*   **Dual Video Modes**: Supports single-image Image-to-Video and Start/End keyframe interpolation.
 
 ### Phase 04: Export
 *   **Timeline Preview**: Preview generated motion comic segments in a timeline format.
@@ -227,8 +230,8 @@ docker-compose up -d --force-recreate
 1.  **Configure Key**: Launch the app and input your AntSK API Key. [**Buy API Key**](https://api.antsk.cn)
 2.  **Input Story**: In Phase 01, enter your story idea and click "Generate Script".
 3.  **Art Direction**: Go to Phase 02, generate character sheets and scene concepts.
-4.  **Shot Production**: Go to Phase 03, generate keyframes for each shot.
-5.  **Motion Generation**: Once keyframes are approved, batch generate the video clips.
+4.  **Shot Production**: In Phase 03, generate the Start Frame first; for tighter control, add an End Frame or use the Nine-Grid preview to choose Start Frame composition.
+5.  **Motion Generation**: Select a video model and generate clips; Start-only frames can produce single-image video, while Start+End frames provide more stable transitions.
 
 ---
 

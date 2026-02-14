@@ -27,7 +27,7 @@ const WorkflowPage: React.FC<WorkflowPageProps> = ({ onNext }) => {
                   <div className="w-12 h-12 rounded-xl bg-[var(--accent-bg)] border border-[var(--accent-border)] flex items-center justify-center mb-2">
                     <Icon className="w-5 h-5 text-[var(--accent-text)]" />
                   </div>
-                  <span className="text-[10px] text-[var(--text-tertiary)] font-mono">{step.number}</span>
+                  <span className="text-xl leading-none text-[var(--text-tertiary)] font-mono">{step.number}</span>
                 </div>
                 {index < WORKFLOW_STEPS.length - 1 && (
                   <ArrowRight className="w-4 h-4 text-[var(--text-muted)] flex-shrink-0" />
