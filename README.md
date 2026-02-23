@@ -154,7 +154,7 @@
 
 直接下载安装包，开箱即用，无需配置开发环境：
 
-**[📥 下载 BigBanana AI Director 客户端 (Windows)](https://tree456.oss-cn-beijing.aliyuncs.com/BigBanana%20AI%20Director%20Setup%201.0.0.exe?Expires=1770908400&OSSAccessKeyId=TMP.3KofXPaUNdnvbUpRP5MqiRmMMxuGwiftTgQfn7U3ntRtFvMYHpMB2kPb17r7rPXksvo7DFncrz4dWSfs3K33wVgGXfnCy4&Signature=wiOZbN%2BcZNuyZdiEI3KR1CqkFhM%3D)**
+**[📥 下载 BigBanana AI Director 客户端 (Windows)](https://download.csdn.net/download/u012094427/92652642?spm=1001.2014.3001.5503)**
 
 > 💡 下载后双击安装即可使用，支持 Windows 系统。
 

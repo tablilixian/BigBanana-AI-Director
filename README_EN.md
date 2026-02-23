@@ -149,7 +149,7 @@ For **quick one-off creative tasks**, try our online tool platform:
 
 Download the installer and get started right away — no development environment needed:
 
-**[📥 Download BigBanana AI Director Client (Windows)](https://tree456.oss-cn-beijing.aliyuncs.com/BigBanana%20AI%20Director%20Setup%201.0.0.exe?Expires=1770908400&OSSAccessKeyId=TMP.3KofXPaUNdnvbUpRP5MqiRmMMxuGwiftTgQfn7U3ntRtFvMYHpMB2kPb17r7rPXksvo7DFncrz4dWSfs3K33wVgGXfnCy4&Signature=wiOZbN%2BcZNuyZdiEI3KR1CqkFhM%3D)**
+**[📥 Download BigBanana AI Director Client (Windows)](https://download.csdn.net/download/u012094427/92652642?spm=1001.2014.3001.5503)**
 
 > 💡 Just download and install — supports Windows.
 
