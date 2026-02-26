@@ -8,6 +8,23 @@ import { getApiKeyForModel, getApiBaseUrlForModel, getActiveVideoModel } from '.
 import { ApiKeyError } from './chatAdapter';
 
 /**
+ * 检查是否为 BigModel 视频模型
+ */
+const isBigModelVideoModel = (modelId: string): boolean => {
+  return modelId.startsWith('vidu') || modelId.startsWith('cogvideo');
+};
+
+/**
+ * 开发环境获取 API Base URL（使用代理避免 CORS）
+ */
+const getDevApiBaseUrl = (modelId: string): string => {
+  if (isBigModelVideoModel(modelId)) {
+    return '/bigmodel';
+  }
+  return getApiBaseUrlForModel(modelId);
+};
+
+/**
  * 重试操作
  */
 const retryOperation = async <T>(
@@ -461,7 +478,7 @@ export const callVideoApi = async (
     throw new ApiKeyError('API Key 缺失，请在设置中配置 API Key');
   }
   
-  const apiBase = getApiBaseUrlForModel(activeModel.id);
+  const apiBase = getDevApiBaseUrl(activeModel.id);
 
   // 根据模式选择不同的 API
   if (activeModel.params.mode === 'async') {

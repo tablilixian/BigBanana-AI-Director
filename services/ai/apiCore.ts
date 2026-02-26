@@ -17,6 +17,23 @@ import {
   getActiveImageModel,
 } from '../modelRegistry';
 
+/**
+ * 检查是否为 BigModel 模型
+ */
+const isBigModelModel = (modelId: string): boolean => {
+  return modelId.startsWith('glm-') || modelId.startsWith('cogview') || modelId.startsWith('vidu') || modelId.startsWith('cogvideo');
+};
+
+/**
+ * 开发环境获取 API Base URL（使用代理避免 CORS）
+ */
+const getDevApiBaseUrl = (modelId: string): string => {
+  if (isBigModelModel(modelId)) {
+    return '/bigmodel';
+  }
+  return getApiBaseUrlForModel(modelId);
+};
+
 // ============================================
 // 脚本日志回调（供各服务模块使用）
 // ============================================
@@ -123,7 +140,8 @@ export const getApiBase = (type: 'chat' | 'image' | 'video' = 'chat', modelId?: 
   try {
     const resolvedModel = resolveModel(type, modelId);
     if (resolvedModel) {
-      return getApiBaseUrlForModel(resolvedModel.id);
+      // 使用开发环境代理
+      return getDevApiBaseUrl(resolvedModel.id);
     }
     return DEFAULT_API_BASE;
   } catch (e) {

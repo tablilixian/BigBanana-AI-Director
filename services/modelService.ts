@@ -18,6 +18,7 @@ import {
   getGlobalApiKey,
   setGlobalApiKey as setRegistryApiKey,
   getActiveVideoModel,
+  getActiveChatModel,
 } from './modelRegistry';
 
 // 导出 ApiKeyError 供外部使用
@@ -154,11 +155,27 @@ export const splitShot = async (options: {
 
 /**
  * 验证 API Key
+ * @param apiKey - API Key
+ * @param baseUrl - 可选的 baseUrl，如果不传则根据当前激活的模型自动判断
  */
-export const verifyApiKey = async (apiKey: string): Promise<{ success: boolean; message: string }> => {
-  return verifyChatApiKey(apiKey);
+export const verifyApiKey = async (apiKey: string, baseUrl?: string): Promise<{ success: boolean; message: string }> => {
+  // 如果传入了 baseUrl，直接使用
+  if (baseUrl) {
+    return verifyChatApiKey(apiKey, baseUrl);
+  }
+  
+  // 否则根据当前激活的模型自动判断
+  const activeModel = getActiveChatModel();
+  
+  let url = 'https://api.antsk.cn';
+  
+  // 如果激活的是 BigModel 系列的模型，使用 BigModel 的端点
+  if (activeModel?.providerId === 'bigmodel' || activeModel?.id.startsWith('glm-')) {
+    url = 'https://open.bigmodel.cn';
+  }
+  
+  return verifyChatApiKey(apiKey, url);
 };
-
 /**
  * 获取全局 API Key
  */

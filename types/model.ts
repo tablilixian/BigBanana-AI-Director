@@ -20,7 +20,7 @@ export type AspectRatio = '16:9' | '9:16' | '1:1';
 /**
  * 视频时长类型（仅异步视频模式支持）
  */
-export type VideoDuration = 4 | 8 | 12;
+export type VideoDuration = 4 | 5 | 8 | 10 | 12;
 
 /**
  * 视频生成模式
@@ -82,7 +82,7 @@ export interface ModelDefinitionBase {
   endpoint?: string;             // API 端点（可覆盖默认）
   description?: string;          // 描述
   isBuiltIn: boolean;            // 是否内置（内置模型不可删除）
-  isEnabled: boolean;            // 是否启用
+  isEnabled: boolean;             // 是否启用
   apiKey?: string;               // 模型专属 API Key（可选，为空时使用全局 Key）
 }
 
@@ -267,7 +267,7 @@ export const BUILTIN_CHAT_MODELS: ChatModelDefinition[] = [
     name: 'GPT-5.2',
     type: 'chat',
     providerId: 'antsk',
-    description: '创意增强型切分：更适合提供多种切分方案、改写节奏与镜头建议（一致性略弱）',
+    description: '创意增强型切分：更适合提供多种切分方案，改写节奏与镜头建议（一致性略弱）',
     isBuiltIn: true,
     isEnabled: true,
     params: { ...DEFAULT_CHAT_PARAMS },
@@ -292,6 +292,55 @@ export const BUILTIN_CHAT_MODELS: ChatModelDefinition[] = [
     isEnabled: true,
     params: { ...DEFAULT_CHAT_PARAMS },
   },
+  // BigModel Chat Models
+  {
+    id: 'glm-4-plus',
+    name: 'GLM-4 Plus',
+    type: 'chat',
+    providerId: 'bigmodel',
+    apiModel: 'glm-4-plus',
+    endpoint: '/api/paas/v4/chat/completions',
+    description: '智谱 GLM-4 Plus 高性能对话模型，适合剧本分析和脚本生成',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: { ...DEFAULT_CHAT_PARAMS },
+  },
+  {
+    id: 'glm-4-air',
+    name: 'GLM-4 Air (高性价比)',
+    type: 'chat',
+    providerId: 'bigmodel',
+    apiModel: 'glm-4-air',
+    endpoint: '/api/paas/v4/chat/completions',
+    description: '智谱 GLM-4 Air 高性价比对话模型，性能接近 GLM-4 Plus，价格仅为 50%',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: { ...DEFAULT_CHAT_PARAMS },
+  },
+  {
+    id: 'glm-4-flash',
+    name: 'GLM-4 Flash (免费)',
+    type: 'chat',
+    providerId: 'bigmodel',
+    apiModel: 'glm-4-flash',
+    endpoint: '/api/paas/v4/chat/completions',
+    description: '智谱 GLM-4 Flash 免费快速响应模型，适合实时对话和快速生成',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: { ...DEFAULT_CHAT_PARAMS },
+  },
+  {
+    id: 'glm-4',
+    name: 'GLM-4',
+    type: 'chat',
+    providerId: 'bigmodel',
+    apiModel: 'glm-4',
+    endpoint: '/api/paas/v4/chat/completions',
+    description: '智谱 GLM-4 对话模型，稳定可靠',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: { ...DEFAULT_CHAT_PARAMS },
+  },
 ];
 
 /**
@@ -305,6 +354,55 @@ export const BUILTIN_IMAGE_MODELS: ImageModelDefinition[] = [
     providerId: 'antsk',
     endpoint: '/v1beta/models/gemini-3-pro-image-preview:generateContent',
     description: 'Google Nano Banana Pro 图片生成模型',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: { ...DEFAULT_IMAGE_PARAMS },
+  },
+  // BigModel Image Models
+  {
+    id: 'cogview-3-flash',
+    name: 'CogView-3 Flash (免费)',
+    type: 'image',
+    providerId: 'bigmodel',
+    apiModel: 'cogview-3-flash',
+    endpoint: '/api/paas/v4/images/generations',
+    description: '智谱 CogView-3 Flash 免费图像生成模型，快速生成，适合体验',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: { ...DEFAULT_IMAGE_PARAMS },
+  },
+  {
+    id: 'cogview-4',
+    name: 'CogView-4',
+    type: 'image',
+    providerId: 'bigmodel',
+    apiModel: 'cogview-4',
+    endpoint: '/api/paas/v4/images/generations',
+    description: '智谱 CogView-4 图像生成模型，支持多种风格和尺寸',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: { ...DEFAULT_IMAGE_PARAMS },
+  },
+  {
+    id: 'cogview-3-plus',
+    name: 'CogView-3 Plus',
+    type: 'image',
+    providerId: 'bigmodel',
+    apiModel: 'cogview-3-plus',
+    endpoint: '/api/paas/v4/images/generations',
+    description: '智谱 CogView-3 Plus 高质量图像生成模型',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: { ...DEFAULT_IMAGE_PARAMS },
+  },
+  {
+    id: 'cogview-3',
+    name: 'CogView-3',
+    type: 'image',
+    providerId: 'bigmodel',
+    apiModel: 'cogview-3',
+    endpoint: '/api/paas/v4/images/generations',
+    description: '智谱 CogView-3 图像生成模型',
     isBuiltIn: true,
     isEnabled: true,
     params: { ...DEFAULT_IMAGE_PARAMS },
@@ -348,6 +446,79 @@ export const BUILTIN_VIDEO_MODELS: VideoModelDefinition[] = [
     isEnabled: true,
     params: { ...DEFAULT_VIDEO_PARAMS_SORA },
   },
+  // BigModel Video Models
+  {
+    id: 'vidu2',
+    name: 'Vidu2 图生视频',
+    type: 'video',
+    providerId: 'bigmodel',
+    apiModel: 'vidu2-image',
+    endpoint: '/api/paas/v4/videos/generations',
+    description: '智谱 Vidu2 图生视频模型，支持多种分辨率和时长',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: {
+      mode: 'async',
+      defaultAspectRatio: '16:9',
+      supportedAspectRatios: ['16:9', '9:16', '1:1'],
+      defaultDuration: 5,
+      supportedDurations: [5, 10],
+    },
+  },
+  {
+    id: 'viduq1',
+    name: 'ViduQ1 图生视频',
+    type: 'video',
+    providerId: 'bigmodel',
+    apiModel: 'viduq1-image',
+    endpoint: '/api/paas/v4/videos/generations',
+    description: '智谱 ViduQ1 图生视频模型，高质量快速生成',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: {
+      mode: 'async',
+      defaultAspectRatio: '16:9',
+      supportedAspectRatios: ['16:9', '9:16', '1:1'],
+      defaultDuration: 5,
+      supportedDurations: [5, 10],
+    },
+  },
+  {
+    id: 'cogvideox-flash',
+    name: 'CogVideoX Flash (免费)',
+    type: 'video',
+    providerId: 'bigmodel',
+    apiModel: 'cogvideox-flash',
+    endpoint: '/api/paas/v4/videos/generations',
+    description: '智谱 CogVideoX Flash 免费视频生成模型，适合基础视频制作',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: {
+      mode: 'async',
+      defaultAspectRatio: '16:9',
+      supportedAspectRatios: ['16:9', '9:16', '1:1'],
+      defaultDuration: 5,
+      supportedDurations: [5, 10],
+    },
+  },
+  {
+    id: 'cogvideox-3',
+    name: 'CogVideoX 图生视频',
+    type: 'video',
+    providerId: 'bigmodel',
+    apiModel: 'cogvideox-3',
+    endpoint: '/api/paas/v4/videos/generations',
+    description: '智谱 CogVideoX 图生视频模型，支持高达 4K 分辨率',
+    isBuiltIn: true,
+    isEnabled: true,
+    params: {
+      mode: 'async',
+      defaultAspectRatio: '16:9',
+      supportedAspectRatios: ['16:9', '9:16', '1:1'],
+      defaultDuration: 5,
+      supportedDurations: [5, 10],
+    },
+  },
 ];
 
 /**
@@ -360,6 +531,13 @@ export const BUILTIN_PROVIDERS: ModelProvider[] = [
     baseUrl: 'https://api.antsk.cn',
     isBuiltIn: true,
     isDefault: true,
+  },
+  {
+    id: 'bigmodel',
+    name: 'BigModel API (open.bigmodel.cn)',
+    baseUrl: 'https://open.bigmodel.cn',
+    isBuiltIn: true,
+    isDefault: false,
   },
 ];
 

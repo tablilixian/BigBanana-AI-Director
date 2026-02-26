@@ -1,10 +1,10 @@
 /**
  * 图片模型适配器
- * 处理 Gemini Image API
+ * 处理 Gemini Image API 和 BigModel CogView API
  */
 
 import { ImageModelDefinition, ImageGenerateOptions, AspectRatio } from '../../types/model';
-import { getApiKeyForModel, getApiBaseUrlForModel, getActiveImageModel } from '../modelRegistry';
+import { getApiKeyForModel, getApiBaseUrlForModel, getActiveImageModel, getProviderById } from '../modelRegistry';
 import { ApiKeyError } from './chatAdapter';
 
 /**
@@ -38,30 +38,103 @@ const retryOperation = async <T>(
 };
 
 /**
- * 调用图片生成 API
+ * 检查是否为 BigModel 提供商
  */
-export const callImageApi = async (
+const isBigModelProvider = (model: ImageModelDefinition): boolean => {
+  const provider = getProviderById(model.providerId);
+  return provider?.id === 'bigmodel' || model.providerId === 'bigmodel';
+};
+
+/**
+ * 调用 BigModel CogView API
+ */
+const callCogViewApi = async (
   options: ImageGenerateOptions,
-  model?: ImageModelDefinition
+  model: ImageModelDefinition,
+  apiKey: string,
+  apiBase: string
 ): Promise<string> => {
-  // 获取当前激活的模型
-  const activeModel = model || getActiveImageModel();
-  if (!activeModel) {
-    throw new Error('没有可用的图片模型');
+  const apiModel = model.apiModel || model.id;
+  const aspectRatio = options.aspectRatio || model.params.defaultAspectRatio;
+  
+  // BigModel 尺寸映射
+  const sizeMap: Record<AspectRatio, string> = {
+    '16:9': '1280x720',
+    '9:16': '720x1280',
+    '1:1': '1024x1024',
+  };
+  const size = sizeMap[aspectRatio] || '1024x1024';
+  
+  const requestBody: any = {
+    model: apiModel,
+    prompt: options.prompt,
+    size,
+  };
+  
+  const response = await retryOperation(async () => {
+    const res = await fetch(`${apiBase}${model.endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!res.ok) {
+      let errorMessage = `HTTP 错误: ${res.status}`;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error?.message || errorData.msg || errorMessage;
+      } catch (e) {
+        const errorText = await res.text();
+        if (errorText) errorMessage = errorText;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await res.json();
+  });
+
+  // BigModel 返回图片 URL，需要下载并转换为 base64
+  const imageUrl = response.data?.[0]?.url;
+  if (!imageUrl) {
+    throw new Error('图片生成失败：未能从响应中提取图片 URL');
   }
 
-  // 获取 API 配置
-  const apiKey = getApiKeyForModel(activeModel.id);
-  if (!apiKey) {
-    throw new ApiKeyError('API Key 缺失，请在设置中配置 API Key');
+  // 开发环境使用代理下载图片以避免 CORS 问题
+  const downloadUrl = import.meta.env.DEV 
+    ? `/proxy-image/${encodeURIComponent(imageUrl)}`
+    : imageUrl;
+
+  const imageResponse = await fetch(downloadUrl);
+  if (!imageResponse.ok) {
+    throw new Error(`图片下载失败: ${imageResponse.status}`);
   }
-  
-  const apiBase = getApiBaseUrlForModel(activeModel.id);
-  const apiModel = activeModel.apiModel || activeModel.id;
-  const endpoint = activeModel.endpoint || `/v1beta/models/${apiModel}:generateContent`;
-  
-  // 确定宽高比
-  const aspectRatio = options.aspectRatio || activeModel.params.defaultAspectRatio;
+
+  const imageBlob = await imageResponse.blob();
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      resolve(reader.result as string);
+    };
+    reader.onerror = () => reject(new Error('图片转换失败'));
+    reader.readAsDataURL(imageBlob);
+  });
+};
+
+/**
+ * 调用 Gemini Image API
+ */
+const callGeminiApi = async (
+  options: ImageGenerateOptions,
+  model: ImageModelDefinition,
+  apiKey: string,
+  apiBase: string
+): Promise<string> => {
+  const apiModel = model.apiModel || model.id;
+  const endpoint = model.endpoint || `/v1beta/models/${apiModel}:generateContent`;
+  const aspectRatio = options.aspectRatio || model.params.defaultAspectRatio;
   
   // 构建提示词
   let finalPrompt = options.prompt;
@@ -175,6 +248,37 @@ export const callImageApi = async (
   }
 
   throw new Error('图片生成失败：未能从响应中提取图片数据');
+};
+
+/**
+ * 调用图片生成 API
+ */
+export const callImageApi = async (
+  options: ImageGenerateOptions,
+  model?: ImageModelDefinition
+): Promise<string> => {
+  // 获取当前激活的模型
+  const activeModel = model || getActiveImageModel();
+  if (!activeModel) {
+    throw new Error('没有可用的图片模型');
+  }
+
+  // 获取 API 配置
+  const apiKey = getApiKeyForModel(activeModel.id);
+  if (!apiKey) {
+    throw new ApiKeyError('API Key 缺失，请在设置中配置 API Key');
+  }
+  
+  let apiBase = getApiBaseUrlForModel(activeModel.id);
+  
+  // 根据提供商选择不同的 API
+  if (isBigModelProvider(activeModel)) {
+    // 开发环境使用代理
+    apiBase = '/bigmodel';
+    return callCogViewApi(options, activeModel, apiKey, apiBase);
+  } else {
+    return callGeminiApi(options, activeModel, apiKey, apiBase);
+  }
 };
 
 /**

@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Sparkles, RefreshCw, Loader2, MapPin, Archive, X, Search, Trash2, Package } from 'lucide-react';
 import { ProjectState, CharacterVariation, Character, Scene, Prop, AspectRatio, AssetLibraryItem, CharacterTurnaroundPanel } from '../../types';
-import { generateImage, generateVisualPrompts, generateCharacterTurnaroundPanels, generateCharacterTurnaroundImage } from '../../services/aiService';
+import { 
+  generateImage, 
+  generateCharacterVisualPrompt, 
+  generateSceneVisualPrompt,
+  generateCharacterTurnaroundPanels, 
+  generateCharacterTurnaroundImage 
+} from '../../services/aiService';
 import { 
   getRegionalPrefix, 
   handleImageUpload, 
@@ -11,6 +17,7 @@ import {
   generateId,
   compareIds 
 } from './utils';
+import { getActiveChatModel } from '../../services/aiService';
 import { DEFAULTS, STYLES, GRID_LAYOUTS } from './constants';
 import ImagePreviewModal from './ImagePreviewModal';
 import CharacterCard from './CharacterCard';
@@ -194,16 +201,15 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
           if (char.visualPrompt) {
             prompt = char.visualPrompt;
           } else {
-            const prompts = await generateVisualPrompts('character', char, genre, DEFAULTS.modelVersion, visualStyle, language);
-            prompt = prompts.visualPrompt;
+            const prompts = await generateCharacterVisualPrompt(char, project.scriptData?.artDirection, visualStyle, language);
+            prompt = prompts;
             
             // 保存生成的提示词
             if (project.scriptData) {
               const newData = { ...project.scriptData };
               const c = newData.characters.find(c => compareIds(c.id, id));
               if (c) {
-                c.visualPrompt = prompts.visualPrompt;
-                c.negativePrompt = prompts.negativePrompt;
+                c.visualPrompt = prompts;
               }
               updateProject({ scriptData: newData });
             }
@@ -215,16 +221,15 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
           if (scene.visualPrompt) {
             prompt = scene.visualPrompt;
           } else {
-            const prompts = await generateVisualPrompts('scene', scene, genre, DEFAULTS.modelVersion, visualStyle, language);
-            prompt = prompts.visualPrompt;
+            const prompts = await generateSceneVisualPrompt(scene, project.scriptData?.artDirection, visualStyle, language);
+            prompt = prompts;
             
             // 保存生成的提示词
             if (project.scriptData) {
               const newData = { ...project.scriptData };
               const s = newData.scenes.find(s => compareIds(s.id, id));
               if (s) {
-                s.visualPrompt = prompts.visualPrompt;
-                s.negativePrompt = prompts.negativePrompt;
+                s.visualPrompt = prompts;
               }
               updateProject({ scriptData: newData });
             }
@@ -241,7 +246,6 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         enhancedPrompt += '. IMPORTANT: This is a pure environment/background scene with absolutely NO people, NO human figures, NO characters, NO silhouettes, NO crowds - empty scene only.';
       }
 
-      // 生成图片（使用选择的横竖屏比例）
       const imageUrl = await generateImage(enhancedPrompt, [], aspectRatio);
 
       // 更新状态
@@ -702,9 +706,6 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         prompt = `A detailed product shot of "${prop.name}". ${prop.description || ''}. Category: ${prop.category}. High quality, studio lighting, clean background, detailed texture and material rendering.`;
       }
 
-      // 道具图片：追加"纯物品/无人物"指令
-      prompt += '. IMPORTANT: This is a standalone prop/item shot with absolutely NO people, NO human figures, NO characters - object only on clean/simple background.';
-
       const imageUrl = await generateImage(prompt, [], aspectRatio);
 
       // 更新状态
@@ -960,6 +961,8 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     const char = project.scriptData?.characters.find(c => compareIds(c.id, charId));
     if (!char) return;
 
+    const activeModel = getActiveChatModel();
+
     // 设置状态为 generating_panels
     updateProject((prev) => {
       if (!prev.scriptData) return prev;
@@ -977,9 +980,10 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     try {
       const panels = await generateCharacterTurnaroundPanels(
         char,
-        visualStyle,
         project.scriptData?.artDirection,
-        language
+        visualStyle,
+        language,
+        activeModel?.id || 'gpt-5.1'
       );
 
       // 更新状态为 panels_ready
@@ -1018,6 +1022,8 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     const char = project.scriptData?.characters.find(c => compareIds(c.id, charId));
     if (!char) return;
 
+    const activeModel = getActiveChatModel();
+
     // 设置状态为 generating_image
     updateProject((prev) => {
       if (!prev.scriptData) return prev;
@@ -1032,11 +1038,13 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
 
     try {
       const imageUrl = await generateCharacterTurnaroundImage(
-        char,
         panels,
+        char,
+        project.scriptData?.artDirection,
         visualStyle,
-        char.referenceImage,
-        project.scriptData?.artDirection
+        '1:1',
+        language,
+        activeModel?.id || 'gpt-5.1'
       );
 
       // 更新状态为 completed
@@ -1117,7 +1125,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     new Set(
       libraryItems.map((item) => (item.projectName && item.projectName.trim()) || '未知项目')
     )
-  ).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+  ).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'));
   const filteredLibraryItems = libraryItems.filter((item) => {
     if (libraryFilter !== 'all' && item.type !== libraryFilter) return false;
     if (libraryProjectFilter !== 'all') {

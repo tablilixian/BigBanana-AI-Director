@@ -47,6 +47,23 @@ const retryOperation = async <T>(
 };
 
 /**
+ * 检查是否为 BigModel 提供商
+ */
+const isBigModelModel = (modelId: string): boolean => {
+  return modelId.startsWith('glm-') || modelId.startsWith('cogview') || modelId.startsWith('vidu') || modelId.startsWith('cogvideo');
+};
+
+/**
+ * 开发环境获取 API Base URL（使用代理避免 CORS）
+ */
+const getDevApiBaseUrl = (modelId: string): string => {
+  if (isBigModelModel(modelId)) {
+    return '/bigmodel';
+  }
+  return getApiBaseUrlForModel(modelId);
+};
+
+/**
  * 清理 JSON 响应
  */
 const cleanJsonResponse = (response: string): string => {
@@ -75,7 +92,7 @@ export const callChatApi = async (
     throw new ApiKeyError('API Key 缺失，请在设置中配置 API Key');
   }
   
-  const apiBase = getApiBaseUrlForModel(activeModel.id);
+  const apiBase = getDevApiBaseUrl(activeModel.id);
   const endpoint = activeModel.endpoint || '/v1/chat/completions';
   const apiModel = activeModel.apiModel || activeModel.id;
   
@@ -177,17 +194,28 @@ export const callChatApi = async (
  */
 export const verifyApiKey = async (apiKey: string, baseUrl?: string): Promise<{ success: boolean; message: string }> => {
   try {
-    const url = baseUrl || 'https://api.antsk.cn';
+    let url = baseUrl || 'https://api.antsk.cn';
+    let endpoint = '/v1/chat/completions';
     
-    const response = await fetch(`${url}/v1/chat/completions`, {
+    // 如果是 BigModel URL，使用开发代理避免 CORS
+    if (url.includes('open.bigmodel.cn')) {
+      url = '/bigmodel';
+      endpoint = '/api/paas/v4/chat/completions';
+    }
+    
+    // 根据 URL 选择合适的测试模型
+    const isBigModel = url === '/bigmodel';
+    const testModel = isBigModel ? 'glm-4-flash' : 'gpt-41';
+    
+    const response = await fetch(`${url}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-41',
-        messages: [{ role: 'user', content: '仅返回1' }],
+        model: testModel,
+        messages: [{ role: 'user', content: '1' }],
         temperature: 0.1,
         max_tokens: 5,
       }),

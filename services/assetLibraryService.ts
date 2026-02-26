@@ -5,7 +5,7 @@ const generateId = (prefix: string): string => {
   return `${prefix}-${Date.now().toString(36)}-${rand}`;
 };
 
-const cloneCharacterVariation = (variation: Character['variations'][number]) => ({
+const cloneCharacterVariation = (variation: Character['variations'][number]): Character['variations'][number] => ({
   ...variation,
   id: generateId('var'),
   status: variation.referenceImage ? 'completed' : 'pending'

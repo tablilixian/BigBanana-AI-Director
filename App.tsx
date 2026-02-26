@@ -101,7 +101,8 @@ function App() {
       // Check if error is related to API Key
       if (event.error?.name === 'ApiKeyError' || 
           event.error?.message?.includes('API Key missing') ||
-          event.error?.message?.includes('AntSK API Key')) {
+          event.error?.message?.includes('AntSK API Key') ||
+          event.error?.message?.includes('API Key 缺失')) {
         console.warn('🔐 检测到 API Key 错误，请配置 API Key...');
         setShowModelConfig(true); // 打开模型配置弹窗让用户配置
         event.preventDefault(); // Prevent default error display
@@ -112,7 +113,8 @@ function App() {
       // Check if rejection is related to API Key
       if (event.reason?.name === 'ApiKeyError' ||
           event.reason?.message?.includes('API Key missing') ||
-          event.reason?.message?.includes('AntSK API Key')) {
+          event.reason?.message?.includes('AntSK API Key') ||
+          event.reason?.message?.includes('API Key 缺失')) {
         console.warn('🔐 检测到 API Key 错误，请配置 API Key...');
         setShowModelConfig(true); // 打开模型配置弹窗让用户配置
         event.preventDefault(); // Prevent default error display

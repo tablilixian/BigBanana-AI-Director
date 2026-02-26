@@ -88,7 +88,7 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
     });
   };
 
-  const handleAddModel = (model: Omit<ModelDefinition, 'id' | 'isBuiltIn'>) => {
+  const handleAddModel = (model: Omit<ModelDefinition, 'isBuiltIn'> & { id?: string }) => {
     try {
       registerModel(model);
       setIsAddingModel(false);
