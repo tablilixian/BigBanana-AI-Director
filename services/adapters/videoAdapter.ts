@@ -308,7 +308,8 @@ const callSoraApi = async (
   }
 
   // 创建任务请求
-  const createResponse = await fetch(`${apiBase}/v1/videos`, {
+  // 使用模型配置的 endpoint
+  const createResponse = await fetch(`${apiBase}${model.endpoint || '/v1/videos'}`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -355,7 +356,11 @@ const callSoraApi = async (
   while (Date.now() - startTime < maxPollingTime) {
     await new Promise(resolve => setTimeout(resolve, pollingInterval));
     
-    const statusResponse = await fetch(`${apiBase}/v1/videos/${taskId}`, {
+    // BigModel 使用 /async-result/{id}，其他模型使用 /videos/{id}
+    const statusEndpoint = model.providerId === 'bigmodel' 
+      ? '/api/paas/v4/async-result' 
+      : (model.endpoint || '/v1/videos');
+    const statusResponse = await fetch(`${apiBase}${statusEndpoint}/${taskId}`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -369,7 +374,33 @@ const callSoraApi = async (
     }
 
     const statusData = await statusResponse.json();
-    const status = statusData.status;
+    // BigModel 使用 task_status，其他模型使用 status
+    const status = statusData.task_status || statusData.status;
+    const isBigModel = model.providerId === 'bigmodel';
+
+    console.log(`🔄 ${model.id} 任务状态:`, status, '进度:', statusData.progress);
+
+    if (status === 'completed' || status === 'succeeded' || status === 'SUCCESS') {
+      // BigModel 返回 video_result 数组
+      if (isBigModel && statusData.video_result && statusData.video_result.length > 0) {
+        videoUrlFromStatus = statusData.video_result[0].url || statusData.video_result[0];
+        console.log('✅ BigModel 视频 URL:', videoUrlFromStatus);
+      } else {
+        videoUrlFromStatus = statusData.video_url || statusData.videoUrl || null;
+        if (statusData.id && statusData.id.startsWith('video_')) {
+          videoId = statusData.id;
+        } else {
+          videoId = statusData.output_video || statusData.video_id || statusData.outputs?.[0]?.id || statusData.id;
+        }
+        if (!videoId && statusData.outputs && statusData.outputs.length > 0) {
+          videoId = statusData.outputs[0];
+        }
+      }
+      console.log('✅ 任务完成，视频:', videoUrlFromStatus || videoId);
+      break;
+    } else if (status === 'failed' || status === 'error' || status === 'FAIL') {
+      throw new Error(`视频生成失败: ${statusData.error || statusData.message || '未知错误'}`);
+    }
 
     console.log('🔄 Sora-2 任务状态:', status, '进度:', statusData.progress);
 

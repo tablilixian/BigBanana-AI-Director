@@ -32,7 +32,8 @@ const generateVideoAsync = async (
   apiKey: string,
   aspectRatio: AspectRatio = '16:9',
   duration: VideoDuration = 8,
-  modelName: string = 'sora-2'
+  modelName: string = 'sora-2',
+  resolvedModel?: any
 ): Promise<string> => {
   const references = [startImageBase64, endImageBase64].filter(Boolean) as string[];
   const resolvedModelName = modelName || 'sora-2';
@@ -50,47 +51,81 @@ const generateVideoAsync = async (
   console.log(`📐 视频尺寸: ${VIDEO_WIDTH}x${VIDEO_HEIGHT}`);
 
   const apiBase = getApiBase('video', resolvedModelName);
+  
+  // 判断是否为 BigModel 模型
+  const isBigModel = resolvedModel?.providerId === 'bigmodel';
+  console.log('[Video] isBigModel:', isBigModel, 'providerId:', resolvedModel?.providerId);
 
-  // Step 1: 创建视频任务
-  const formData = new FormData();
-  formData.append('model', resolvedModelName);
-  formData.append('prompt', prompt);
-  formData.append('seconds', String(duration));
-  formData.append('size', videoSize);
-
-  const appendReference = async (base64: string, filename: string, fieldName: string) => {
-    const cleanBase64 = base64.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
-    console.log(`📐 调整参考图片尺寸至 ${VIDEO_WIDTH}x${VIDEO_HEIGHT}...`);
-    const resizedBase64 = await resizeImageToSize(cleanBase64, VIDEO_WIDTH, VIDEO_HEIGHT);
-    const byteCharacters = atob(resizedBase64);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
+  let createResponse: Response;
+  
+  if (isBigModel) {
+    // BigModel: 使用 JSON 格式
+    const requestBody: any = {
+      model: resolvedModelName,
+      prompt: prompt,
+      duration: duration,
+      size: videoSize,
+      movement_amplitude: 'auto'
+    };
+    
+    // 添加图片（支持 base64）
+    if (references.length >= 1) {
+      if (references.length >= 2 && (resolvedModelName.includes('vidu2') || resolvedModelName.includes('reference'))) {
+        requestBody.image_url = [
+          `data:image/png;base64,${references[0].replace(/^data:image\/[^;]+;base64,/, '')}`,
+          `data:image/png;base64,${references[1].replace(/^data:image\/[^;]+;base64,/, '')}`
+        ];
+      } else {
+        requestBody.image_url = `data:image/png;base64,${references[0].replace(/^data:image\/[^;]+;base64,/, '')}`;
+      }
     }
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: 'image/png' });
-    formData.append(fieldName, blob, filename);
-  };
+    
+    console.log('[BigModel] Request:', JSON.stringify(requestBody));
+    
+    createResponse = await fetch(`${apiBase}${resolvedModel?.endpoint || '/v1/videos'}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+  } else {
+    // AntSK: 使用 FormData 格式
+    const formData = new FormData();
+    formData.append('model', resolvedModelName);
+    formData.append('prompt', prompt);
+    formData.append('seconds', String(duration));
+    formData.append('size', videoSize);
 
-  if (useReferenceArray && references.length >= 2) {
-    const limited = references.slice(0, 2);
-    await appendReference(limited[0], 'reference-start.png', 'input_reference[]');
-    await appendReference(limited[1], 'reference-end.png', 'input_reference[]');
-  } else if (references.length >= 1) {
-    await appendReference(references[0], 'reference.png', 'input_reference');
+    const appendReference = async (base64: string, filename: string, fieldName: string) => {
+      const cleanBase64 = base64.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
+      const resizedBase64 = await resizeImageToSize(cleanBase64, VIDEO_WIDTH, VIDEO_HEIGHT);
+      const byteCharacters = atob(resizedBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'image/png' });
+      formData.append(fieldName, blob, filename);
+    };
+
+    if (useReferenceArray && references.length >= 2) {
+      await appendReference(references[0], 'reference-start.png', 'input_reference[]');
+      await appendReference(references[1], 'reference-end.png', 'input_reference[]');
+    } else if (references.length >= 1) {
+      await appendReference(references[0], 'reference.png', 'input_reference');
+    }
+
+    createResponse = await fetch(`${apiBase}${resolvedModel?.endpoint || '/v1/videos'}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: formData,
+    });
   }
-
-  if (references.length > 0) {
-    console.log('✅ 参考图片已调整尺寸并添加');
-  }
-
-  const createResponse = await fetch(`${apiBase}/v1/videos`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: formData
-  });
 
   if (!createResponse.ok) {
     if (createResponse.status === 400) {
@@ -129,7 +164,11 @@ const generateVideoAsync = async (
   while (Date.now() - startTime < maxPollingTime) {
     await new Promise(resolve => setTimeout(resolve, pollingInterval));
 
-    const statusResponse = await fetch(`${apiBase}/v1/videos/${taskId}`, {
+    // BigModel 使用 /async-result/{id}，其他模型使用 /videos/{id}
+    const statusEndpoint = resolvedModel?.providerId === 'bigmodel' 
+      ? '/api/paas/v4/async-result' 
+      : (resolvedModel?.endpoint || '/v1/videos');
+    const statusResponse = await fetch(`${apiBase}${statusEndpoint}/${taskId}`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -143,7 +182,46 @@ const generateVideoAsync = async (
     }
 
     const statusData = await statusResponse.json();
-    const status = statusData.status;
+    // BigModel 使用 task_status，其他模型使用 status
+    const status = statusData.task_status || statusData.status;
+    const isBigModel = resolvedModel?.providerId === 'bigmodel';
+
+    console.log(`🔄 ${resolvedModelName} 任务状态:`, status, '进度:', statusData.progress);
+
+    if (status === 'completed' || status === 'succeeded' || status === 'SUCCESS') {
+      // BigModel 返回 video_result 数组
+      if (isBigModel && statusData.video_result && statusData.video_result.length > 0) {
+        let rawUrl = statusData.video_result[0].url || statusData.video_result[0];
+        // 如果是 UCloud URL，通过代理下载
+        if (rawUrl.includes('ufileos.com')) {
+          const videoPath = rawUrl.replace('https://maas-watermark-prod-new.cn-wlcb.ufileos.com/', '');
+          videoUrlFromStatus = `/video-proxy/${videoPath}`;
+          console.log('[BigModel] 视频 URL (代理):', videoUrlFromStatus);
+        } else {
+          videoUrlFromStatus = rawUrl;
+        }
+        console.log('✅ BigModel 视频 URL:', videoUrlFromStatus);
+      } else {
+        videoUrlFromStatus = statusData.video_url || statusData.videoUrl || null;
+        if (statusData.id && statusData.id.startsWith('video_')) {
+          videoId = statusData.id;
+        } else {
+          videoId = statusData.output_video || statusData.video_id || statusData.outputs?.[0]?.id || statusData.id;
+        }
+        if (!videoId && statusData.outputs && statusData.outputs.length > 0) {
+          videoId = statusData.outputs[0];
+        }
+      }
+      console.log('✅ 任务完成，视频:', videoUrlFromStatus || videoId);
+      break;
+    } else if (status === 'failed' || status === 'error' || status === 'FAIL') {
+      const errorMessage =
+        statusData?.error?.message ||
+        statusData?.error?.code ||
+        statusData?.message ||
+        '未知错误';
+      throw new Error(`视频生成失败: ${errorMessage}`);
+    }
 
     console.log(`🔄 ${resolvedModelName} 任务状态:`, status, '进度:', statusData.progress);
 
@@ -292,7 +370,8 @@ export const generateVideo = async (
       apiKey,
       aspectRatio,
       duration,
-      requestModel || 'sora-2'
+      requestModel || 'sora-2',
+      resolvedVideoModel
     );
   }
 

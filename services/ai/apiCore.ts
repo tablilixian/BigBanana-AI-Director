@@ -25,9 +25,20 @@ const isBigModelModel = (modelId: string): boolean => {
 };
 
 /**
+ * 检查是否为 BigModel 视频模型
+ */
+const isBigModelVideoModel = (modelId: string): boolean => {
+  return modelId.startsWith('vidu') || modelId.startsWith('cogvideo');
+};
+
+/**
  * 开发环境获取 API Base URL（使用代理避免 CORS）
+ * 注意：BigModel 视频模型使用视频代理，其他 BigModel 模型使用普通代理
  */
 const getDevApiBaseUrl = (modelId: string): string => {
+  if (isBigModelVideoModel(modelId)) {
+    return '/bigmodel';
+  }
   if (isBigModelModel(modelId)) {
     return '/bigmodel';
   }

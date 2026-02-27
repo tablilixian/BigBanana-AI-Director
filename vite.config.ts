@@ -10,11 +10,17 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
         proxy: {
-          // BigModel API 代理
+          // BigModel API 代理 (包括视频生成)
           '/bigmodel': {
             target: 'https://open.bigmodel.cn',
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/bigmodel/, ''),
+          },
+          // UCloud 视频下载代理 (解决 CORS)
+          '/video-proxy': {
+            target: 'https://maas-watermark-prod-new.cn-wlcb.ufileos.com',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/video-proxy\//, ''),
           },
         },
       },
