@@ -471,8 +471,20 @@ export const verifyApiKey = async (key: string): Promise<{ success: boolean; mes
  * 将视频URL转换为base64格式
  */
 export const convertVideoUrlToBase64 = async (url: string): Promise<string> => {
+  // 处理 BigModel 视频 URL 代理
+  let proxyUrl = url;
+  if (url.includes('aigc-files.bigmodel.cn')) {
+    const videoPath = url.replace('https://aigc-files.bigmodel.cn/', '');
+    proxyUrl = `/bigmodel-files/${videoPath}`;
+    console.log('[Video] 使用 BigModel 文件代理:', proxyUrl);
+  } else if (url.includes('ufileos.com')) {
+    const videoPath = url.replace('https://maas-watermark-prod-new.cn-wlcb.ufileos.com/', '');
+    proxyUrl = `/video-proxy/${videoPath}`;
+    console.log('[Video] 使用 UCloud 代理:', proxyUrl);
+  }
+
   try {
-    const response = await fetch(url);
+    const response = await fetch(proxyUrl);
     if (!response.ok) {
       throw new Error(`下载视频失败: HTTP ${response.status}`);
     }

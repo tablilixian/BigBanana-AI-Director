@@ -100,7 +100,8 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   }, [currentVideoModelId]);
 
   const normalizedModelId = localVideoModelId.trim().toLowerCase();
-  const showEndFrame = normalizedModelId.startsWith('veo');
+  // 所有视频模型都支持首尾帧模式
+  const showEndFrame = true;
   
   // 从shot.id中提取显示编号
   const getShotDisplayNumber = () => {
