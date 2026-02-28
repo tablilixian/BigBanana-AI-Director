@@ -1,7 +1,8 @@
 import React from 'react';
-import { FileText, Users, Clapperboard, Film, ChevronLeft, ListTree, HelpCircle, Cpu, Sun, Moon, Loader2 } from 'lucide-react';
+import { FileText, Users, Clapperboard, Film, ChevronLeft, ListTree, HelpCircle, Cpu, Sun, Moon, Loader2, LogOut, User } from 'lucide-react';
 import logoImg from '../logo.png';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuthStore } from '../src/stores/authStore';
 
 interface SidebarProps {
   currentStage: string;
@@ -15,6 +16,8 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, projectName, onShowOnboarding, onShowModelConfig, isNavigationLocked }) => {
   const { theme, toggleTheme } = useTheme();
+  const { user, signOut } = useAuthStore();
+  
   const navItems = [
     { id: 'script', label: '剧本与故事', icon: FileText, sub: 'Phase 01' },
     { id: 'assets', label: '角色与场景', icon: Users, sub: 'Phase 02' },
@@ -22,6 +25,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, proje
     { id: 'export', label: '成片与导出', icon: Film, sub: 'Phase 04' },
     { id: 'prompts', label: '提示词管理', icon: ListTree, sub: 'Advanced' },
   ];
+
+  const handleSignOut = async () => {
+    await signOut()
+    window.location.reload()
+  }
 
   return (
     <aside className="w-72 bg-[var(--bg-base)] border-r border-[var(--border-primary)] h-screen fixed left-0 top-0 flex flex-col z-50 select-none">
@@ -31,7 +39,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, proje
           href="https://tree456.com/" 
           target="_blank" 
           rel="noopener noreferrer"
-          className="flex items-center gap-3 mb-6 group cursor-pointer"
+          className="flex items-center gap-3 mb-4 group cursor-pointer"
         >
           <img src={logoImg} alt="Logo" className="w-8 h-8 flex-shrink-0 transition-transform group-hover:scale-110" />
           <div className="overflow-hidden">
@@ -39,6 +47,18 @@ const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, proje
             <p className="text-[10px] text-[var(--text-tertiary)] tracking-widest group-hover:text-[var(--text-secondary)] transition-colors">Studio Pro</p>
           </div>
         </a>
+
+        {/* User Info */}
+        {user && (
+          <div className="flex items-center gap-2 mb-3 px-2 py-2 rounded-lg bg-[var(--bg-hover)]">
+            <div className="w-7 h-7 rounded-full bg-[var(--accent)] flex items-center justify-center flex-shrink-0">
+              <User className="w-4 h-4 text-[var(--text-primary)]" />
+            </div>
+            <div className="overflow-hidden">
+              <div className="text-xs font-medium text-[var(--text-primary)] truncate">{user.email}</div>
+            </div>
+          </div>
+        )}
 
         <button 
           onClick={onExit}
@@ -111,6 +131,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, proje
           <span className="font-mono text-[10px] uppercase tracking-widest">{theme === 'dark' ? '亮色主题' : '暗色主题'}</span>
           {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
+        
         {onShowOnboarding && (
           <button 
             onClick={onShowOnboarding}
@@ -120,6 +141,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, proje
             <HelpCircle className="w-4 h-4" />
           </button>
         )}
+        
         {onShowModelConfig && (
           <button 
             onClick={onShowModelConfig}
@@ -127,6 +149,17 @@ const Sidebar: React.FC<SidebarProps> = ({ currentStage, setStage, onExit, proje
           >
             <span className="font-mono text-[10px] uppercase tracking-widest">模型配置</span>
             <Cpu className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Sign Out Button */}
+        {user && (
+          <button 
+            onClick={handleSignOut}
+            className="w-full flex items-center justify-between text-[var(--text-muted)] hover:text-[var(--error)] cursor-pointer transition-colors"
+          >
+            <span className="font-mono text-[10px] uppercase tracking-widest">退出登录</span>
+            <LogOut className="w-4 h-4" />
           </button>
         )}
       </div>

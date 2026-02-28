@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, Trash2, Loader2, Folder, ChevronRight, Calendar, AlertTriangle, X, HelpCircle, Cpu, Archive, Search, Users, MapPin, Database, Settings, Sun, Moon } from 'lucide-react';
+import { Plus, Trash2, Loader2, Folder, ChevronRight, Calendar, AlertTriangle, X, HelpCircle, Cpu, Archive, Search, Users, MapPin, Database, Settings, Sun, Moon, LogOut, User } from 'lucide-react';
 import { ProjectState, AssetLibraryItem, Character, Scene } from '../types';
 import { getAllProjectsMetadata, createNewProjectState, deleteProjectFromDB, getAllAssetLibraryItems, deleteAssetFromLibrary, loadProjectFromDB, saveProjectToDB, exportIndexedDBData, importIndexedDBData } from '../services/storageService';
 import { applyLibraryItemToProject } from '../services/assetLibraryService';
 import { useAlert } from './GlobalAlert';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuthStore } from '../src/stores/authStore';
 import qrCodeImg from '../images/qrcode.jpg';
 
 interface Props {
@@ -16,6 +17,7 @@ interface Props {
 const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowModelConfig }) => {
   const { showAlert } = useAlert();
   const { theme, toggleTheme } = useTheme();
+  const { user, signOut } = useAuthStore();
   const [projects, setProjects] = useState<ProjectState[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -266,6 +268,21 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
               <Settings className="w-4 h-4" />
               <span className="font-medium text-xs tracking-widest uppercase">系统设置</span>
             </button>
+            {user && (
+              <div className="flex items-center gap-2 px-3 py-2 border border-[var(--border-primary)] bg-[var(--bg-surface)]">
+                <User className="w-4 h-4 text-[var(--text-tertiary)]" />
+                <span className="text-xs text-[var(--text-tertiary)] max-w-[150px] truncate">
+                  {user.email}
+                </span>
+                <button
+                  onClick={signOut}
+                  className="p-1 hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--error-text)] transition-colors"
+                  title="退出登录"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            )}
             <button
               onClick={toggleTheme}
               className="group flex items-center gap-2 px-4 py-3 border border-[var(--border-primary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-[var(--border-secondary)] transition-colors"

@@ -9,15 +9,22 @@ import Dashboard from './components/Dashboard';
 import Onboarding, { shouldShowOnboarding, resetOnboarding } from './components/Onboarding';
 import ModelConfigModal from './components/ModelConfig';
 import { ProjectState } from './types';
-import { Save, CheckCircle, X } from 'lucide-react';
+import { Save, CheckCircle } from 'lucide-react';
 import { saveProjectToDB } from './services/storageService';
 import { setGlobalApiKey } from './services/aiService';
 import { setLogCallback, clearLogCallback } from './services/renderLogService';
 import { useAlert } from './components/GlobalAlert';
+import { useAuthStore } from './src/stores/authStore';
+import LoginPage from './src/pages/LoginPage';
+import RegisterPage from './src/pages/RegisterPage';
 import logoImg from './logo.png';
+
+type AuthView = 'login' | 'register' | 'app';
 
 function App() {
   const { showAlert } = useAlert();
+  const { user, loading: authLoading, initialize } = useAuthStore();
+  const [authView, setAuthView] = useState<AuthView>('app');
   const [project, setProject] = useState<ProjectState | null>(null);
   const [apiKey, setApiKey] = useState<string>('');
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
@@ -28,9 +35,20 @@ function App() {
   const [showModelConfig, setShowModelConfig] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   
-  // Ref to hold debounce timer
   const saveTimeoutRef = useRef<any>(null);
   const hideStatusTimeoutRef = useRef<any>(null);
+
+  // Initialize auth on mount
+  useEffect(() => {
+    initialize();
+  }, []);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user && authView === 'app') {
+      setAuthView('login');
+    }
+  }, [user, authLoading, authView]);
 
   // Detect mobile device on mount
   useEffect(() => {
@@ -52,32 +70,29 @@ function App() {
       setApiKey(storedKey);
       setGlobalApiKey(storedKey);
     }
-    // 检查是否需要显示首次引导（无论有没有 API Key）
     if (shouldShowOnboarding()) {
       setShowOnboarding(true);
     }
   }, []);
 
-  // 处理引导完成
+  // Handle onboarding complete
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
   };
 
-  // 处理快速开始选项
+  // Handle onboarding quick start
   const handleOnboardingQuickStart = (option: 'script' | 'example') => {
     setShowOnboarding(false);
-    // 如果选择"从剧本开始"，可以后续扩展为创建新项目
-    // 如果选择"看看示例项目"，可以后续扩展为打开示例项目
     console.log('Quick start option:', option);
   };
 
-  // 重新显示引导（供帮助菜单调用）
+  // Show onboarding
   const handleShowOnboarding = () => {
     resetOnboarding();
     setShowOnboarding(true);
   };
 
-  // 保存 API Key（从设置或引导中）
+  // Save API Key
   const handleSaveApiKey = (key: string) => {
     if (key) {
       setApiKey(key);
@@ -90,34 +105,32 @@ function App() {
     }
   };
 
-  // 显示模型配置弹窗
+  // Show model config
   const handleShowModelConfig = () => {
     setShowModelConfig(true);
   };
 
-  // Global error handler to catch API Key errors
+  // Global error handler
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
-      // Check if error is related to API Key
       if (event.error?.name === 'ApiKeyError' || 
           event.error?.message?.includes('API Key missing') ||
           event.error?.message?.includes('AntSK API Key') ||
           event.error?.message?.includes('API Key 缺失')) {
-        console.warn('🔐 检测到 API Key 错误，请配置 API Key...');
-        setShowModelConfig(true); // 打开模型配置弹窗让用户配置
-        event.preventDefault(); // Prevent default error display
+        console.warn('检测到 API Key 错误，请配置 API Key...');
+        setShowModelConfig(true);
+        event.preventDefault();
       }
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      // Check if rejection is related to API Key
       if (event.reason?.name === 'ApiKeyError' ||
           event.reason?.message?.includes('API Key missing') ||
           event.reason?.message?.includes('AntSK API Key') ||
           event.reason?.message?.includes('API Key 缺失')) {
-        console.warn('🔐 检测到 API Key 错误，请配置 API Key...');
-        setShowModelConfig(true); // 打开模型配置弹窗让用户配置
-        event.preventDefault(); // Prevent default error display
+        console.warn('检测到 API Key 错误，请配置 API Key...');
+        setShowModelConfig(true);
+        event.preventDefault();
       }
     };
 
@@ -147,7 +160,7 @@ function App() {
     }
     
     return () => clearLogCallback();
-  }, [project?.id]); // Re-setup when project changes
+  }, [project?.id]);
 
   // Auto-save logic
   useEffect(() => {
@@ -165,14 +178,14 @@ function App() {
       } catch (e) {
         console.error("Auto-save failed", e);
       }
-    }, 1000); // Debounce 1s
+    }, 1000);
 
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
   }, [project]);
 
-  // Auto-hide save status after 2 seconds
+  // Auto-hide save status
   useEffect(() => {
     if (saveStatus === 'saved') {
       if (hideStatusTimeoutRef.current) clearTimeout(hideStatusTimeoutRef.current);
@@ -189,12 +202,11 @@ function App() {
     };
   }, [saveStatus]);
 
-
+  // Update project
   const updateProject = (updates: Partial<ProjectState> | ((prev: ProjectState) => ProjectState)) => {
     if (!project) return;
     setProject(prev => {
       if (!prev) return null;
-      // 支持函数式更新
       if (typeof updates === 'function') {
         return updates(prev);
       }
@@ -202,6 +214,7 @@ function App() {
     });
   };
 
+  // Set stage
   const setStage = (stage: 'script' | 'assets' | 'director' | 'export' | 'prompts') => {
     if (isGenerating) {
       showAlert('当前正在执行生成任务（剧本分镜 / 首帧 / 视频等），切换页面会导致生成数据丢失，且已扣除的费用无法恢复。\n\n确定要离开当前页面吗？', {
@@ -220,10 +233,12 @@ function App() {
     updateProject({ stage });
   };
 
+  // Handle open project
   const handleOpenProject = (proj: ProjectState) => {
     setProject(proj);
   };
 
+  // Handle exit project
   const handleExitProject = async () => {
     if (isGenerating) {
       showAlert('当前正在执行生成任务（剧本分镜 / 首帧 / 视频等），退出项目会导致生成数据丢失，且已扣除的费用无法恢复。\n\n确定要退出吗？', {
@@ -242,13 +257,13 @@ function App() {
       });
       return;
     }
-    // Force save before exiting
     if (project) {
         await saveProjectToDB(project);
     }
     setProject(null);
   };
 
+  // Render stage
   const renderStage = () => {
     if (!project) return null;
     switch (project.stage) {
@@ -274,7 +289,49 @@ function App() {
     }
   };
 
-  // Mobile Warning Screen
+  // Auth handlers
+  const handleLoginSuccess = () => {
+    setAuthView('app');
+  };
+
+  const handleSwitchToRegister = () => {
+    setAuthView('register');
+  };
+
+  const handleSwitchToLogin = () => {
+    setAuthView('login');
+  };
+
+  // Show loading while checking auth
+  if (authLoading && authView !== 'app') {
+    return (
+      <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center">
+        <div className="text-[var(--text-muted)]">加载中...</div>
+      </div>
+    );
+  }
+
+  // Show login page
+  if (authView === 'login') {
+    return (
+      <LoginPage
+        onSwitchToRegister={handleSwitchToRegister}
+        onLoginSuccess={handleLoginSuccess}
+      />
+    );
+  }
+
+  // Show register page
+  if (authView === 'register') {
+    return (
+      <RegisterPage
+        onSwitchToLogin={handleSwitchToLogin}
+        onRegisterSuccess={handleLoginSuccess}
+      />
+    );
+  }
+
+  // Mobile warning
   if (isMobile) {
     return (
       <div className="h-screen bg-[var(--bg-base)] flex items-center justify-center p-6">
@@ -299,7 +356,7 @@ function App() {
     );
   }
 
-  // Dashboard View
+  // Dashboard view
   if (!project) {
     return (
        <>
@@ -324,7 +381,7 @@ function App() {
     );
   }
 
-  // Workspace View
+  // Workspace view
   return (
     <div className="flex h-screen bg-[var(--bg-secondary)] font-sans text-[var(--text-secondary)] selection:bg-[var(--accent-bg)]">
       <Sidebar 
@@ -340,7 +397,6 @@ function App() {
       <main className="ml-72 flex-1 h-screen overflow-hidden relative">
         {renderStage()}
         
-        {/* Save Status Indicator */}
         {showSaveStatus && (
           <div className="absolute top-4 right-6 pointer-events-none flex items-center gap-2 text-xs font-mono text-[var(--text-tertiary)] bg-[var(--overlay-medium)] px-2 py-1 rounded-full backdrop-blur-sm z-50 animate-in fade-in slide-in-from-top-2 duration-200">
              {saveStatus === 'saving' ? (
@@ -358,7 +414,6 @@ function App() {
         )}
       </main>
 
-      {/* Onboarding Modal */}
       {showOnboarding && (
         <Onboarding 
           onComplete={handleOnboardingComplete}
@@ -368,7 +423,6 @@ function App() {
         />
       )}
 
-      {/* Model Config Modal */}
       <ModelConfigModal
         isOpen={showModelConfig}
         onClose={() => setShowModelConfig(false)}

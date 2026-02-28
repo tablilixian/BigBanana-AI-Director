@@ -1,0 +1,27 @@
+{
+  "github": {
+    "silent": true
+  },
+  "functions": {
+    "generate-video": {
+      "path": "supabase/functions/generate-video",
+      "runtime": "edge"
+    },
+    "webhook-video-complete": {
+      "path": "supabase/functions/webhook-video-complete",
+      "runtime": "edge"
+    },
+    "get-video-status": {
+      "path": "supabase/functions/get-video-status",
+      "runtime": "edge"
+    }
+  },
+  "env": {
+    "SUPABASE_URL": {
+      "required": true
+    },
+    "SUPABASE_SERVICE_ROLE_KEY": {
+      "required": true
+    }
+  }
+}
