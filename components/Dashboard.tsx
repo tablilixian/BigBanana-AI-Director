@@ -243,22 +243,22 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
             <h1 className="text-3xl font-light text-[var(--text-primary)] tracking-tight mb-2 flex items-center gap-3">
               项目库
               <span className="text-[var(--text-muted)] text-lg">/</span>
-              <span className="text-[var(--text-muted)] text-sm font-mono tracking-widest uppercase">Projects Database</span>
+              <span className="text-[var(--text-muted)] text-sm font-mono tracking-widest uppercase">{t('dashboard.subtitle')}</span>
             </h1>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowGroupQr(true)}
               className="group flex items-center gap-2 px-4 py-3 border border-[var(--border-primary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-[var(--border-secondary)] transition-colors"
-              title="加入交流群"
+              title={t('group.join')}
             >
-              <span className="font-medium text-xs tracking-widest uppercase">交流群</span>
+              <span className="font-medium text-xs tracking-widest uppercase">{t('group.join')}</span>
             </button>
             {onShowOnboarding && (
               <button 
                 onClick={onShowOnboarding}
                 className="group flex items-center gap-2 px-4 py-3 border border-[var(--border-primary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-[var(--border-secondary)] transition-colors"
-                title="查看新手引导"
+                title={t('onboarding.viewGuide')}
               >
                 <HelpCircle className="w-4 h-4" />
                 <span className="font-medium text-xs tracking-widest uppercase">帮助</span>
