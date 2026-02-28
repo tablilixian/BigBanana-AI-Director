@@ -6,6 +6,8 @@ import { applyLibraryItemToProject } from '../services/assetLibraryService';
 import { useAlert } from './GlobalAlert';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuthStore } from '../src/stores/authStore';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '../src/components/LanguageSwitcher';
 import qrCodeImg from '../images/qrcode.jpg';
 
 interface Props {
@@ -18,6 +20,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
   const { showAlert } = useAlert();
   const { theme, toggleTheme } = useTheme();
   const { user, signOut } = useAuthStore();
+  const { t } = useTranslation();
   const [projects, setProjects] = useState<ProjectState[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -291,6 +294,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               <span className="font-medium text-xs tracking-widest uppercase">{theme === 'dark' ? '亮色' : '暗色'}</span>
             </button>
+            <LanguageSwitcher />
             <button 
               onClick={handleCreate}
               className="group flex items-center gap-3 px-6 py-3 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors"

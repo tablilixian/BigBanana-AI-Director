@@ -18,6 +18,7 @@ import { useAuthStore } from './src/stores/authStore';
 import LoginPage from './src/pages/LoginPage';
 import RegisterPage from './src/pages/RegisterPage';
 import logoImg from './logo.png';
+import './src/i18n';
 
 type AuthView = 'login' | 'register' | 'app';
 

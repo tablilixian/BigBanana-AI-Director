@@ -1,0 +1,134 @@
+{
+  "common": {
+    "loading": "加载中...",
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确认",
+    "delete": "删除",
+    "edit": "编辑",
+    "add": "添加",
+    "create": "创建",
+    "search": "搜索",
+    "close": "关闭",
+    "success": "成功",
+    "error": "错误",
+    "warning": "警告",
+    "info": "提示"
+  },
+  "nav": {
+    "dashboard": "项目库",
+    "projects": "项目",
+    "settings": "设置"
+  },
+  "dashboard": {
+    "title": "项目库",
+    "subtitle": "Projects Database",
+    "createNew": "新建项目",
+    "createNewProject": "创建新项目",
+    "noProjects": "暂无项目",
+    "lastModified": "最后修改",
+    "deleteConfirm": "确认删除项目？",
+    "deleteWarning": "此操作无法撤销",
+    "deleteInfo": "将同时删除以下所有资源：",
+    "deleteCharacters": "· 角色和场景参考图",
+    "deleteFrames": "· 所有关键帧图像",
+    "deleteVideos": "· 所有生成的视频片段",
+    "deleteHistory": "· 渲染历史记录",
+    "cancel": "取消",
+    "permanentDelete": "永久删除"
+  },
+  "stages": {
+    "script": "剧本阶段",
+    "assets": "资产生成",
+    "director": "导演工作台",
+    "export": "导出阶段"
+  },
+  "sidebar": {
+    "newProject": "新建项目",
+    "projects": "所有项目",
+    "help": "帮助",
+    "settings": "系统设置"
+  },
+  "auth": {
+    "login": "登录",
+    "register": "注册",
+    "email": "邮箱",
+    "password": "密码",
+    "confirmPassword": "确认密码",
+    "logout": "退出登录",
+    "noAccount": "还没有账号？",
+    "hasAccount": "已有账号？",
+    "loginSuccess": "登录成功",
+    "registerSuccess": "注册成功",
+    "logoutSuccess": "已退出登录",
+    "loginFailed": "登录失败",
+    "registerFailed": "注册失败"
+  },
+  "settings": {
+    "title": "系统设置",
+    "subtitle": "Settings",
+    "modelConfig": "模型配置",
+    "modelConfigDesc": "管理模型与 API 设置",
+    "assetLibrary": "资产库",
+    "assetLibraryDesc": "浏览并复用角色与场景资产",
+    "exportData": "导出数据",
+    "exportDataDesc": "导出全部项目与资产库备份",
+    "importData": "导入数据",
+    "importDataDesc": "导入全部项目与资产库备份"
+  },
+  "theme": {
+    "light": "亮色",
+    "dark": "暗色",
+    "switchToLight": "切换亮色主题",
+    "switchToDark": "切换暗色主题"
+  },
+  "language": {
+    "switch": "语言",
+    "chinese": "中文",
+    "english": "English"
+  },
+  "group": {
+    "join": "加入交流群",
+    "qrTitle": "加入交流群",
+    "qrDesc": "扫码进入产品体验群",
+    "qrValid": "二维码有效期请以实际为准"
+  },
+  "onboarding": {
+    "help": "帮助",
+    "viewGuide": "查看新手引导"
+  },
+  "assetLibrary": {
+    "title": "资产库",
+    "subtitle": "Asset Library",
+    "description": "在项目里将角色与场景加入资产库，跨项目复用",
+    "assets": "assets",
+    "searchPlaceholder": "搜索资产名称...",
+    "allProjects": "全部项目",
+    "all": "全部",
+    "character": "角色",
+    "scene": "场景",
+    "noAssets": "暂无资产。可在项目的'角色与场景'中加入资产库。",
+    "useProject": "选择项目使用",
+    "delete": "删除",
+    "unknownProject": "未知项目"
+  },
+  "import": {
+    "title": "选择项目使用",
+    "description": "将资产导入到以下项目",
+    "noProjects": "暂无项目可用"
+  },
+  "backup": {
+    "exportSuccess": "导出完成，备份文件已下载。",
+    "exportFailed": "导出失败",
+    "importSuccess": "导入完成",
+    "importFailed": "导入失败",
+    "importConfirm": "将导入 {{projects}} 个项目和 {{assets}} 个资产。若 ID 冲突将覆盖现有数据。是否继续？",
+    "importResult": "导入完成：项目 {{projects}} 个，资产 {{assets}} 个。"
+  },
+  "errors": {
+    "deleteProjectFailed": "删除项目失败",
+    "deleteAssetFailed": "删除资产失败",
+    "importFailed": "导入失败",
+    "exportFailed": "导出失败"
+  }
+}

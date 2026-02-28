@@ -1,0 +1,134 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "create": "Create",
+    "search": "Search",
+    "close": "Close",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Info"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "title": "Projects",
+    "subtitle": "Projects Database",
+    "createNew": "New Project",
+    "createNewProject": "Create New Project",
+    "noProjects": "No projects yet",
+    "lastModified": "Last modified",
+    "deleteConfirm": "Confirm delete project?",
+    "deleteWarning": "This action cannot be undone",
+    "deleteInfo": "The following resources will also be deleted:",
+    "deleteCharacters": "· Character and scene reference images",
+    "deleteFrames": "· All keyframe images",
+    "deleteVideos": "· All generated video clips",
+    "deleteHistory": "· Render history",
+    "cancel": "Cancel",
+    "permanentDelete": "Delete Permanently"
+  },
+  "stages": {
+    "script": "Script",
+    "assets": "Assets",
+    "director": "Director",
+    "export": "Export"
+  },
+  "sidebar": {
+    "newProject": "New Project",
+    "projects": "All Projects",
+    "help": "Help",
+    "settings": "Settings"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "logout": "Logout",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "loginSuccess": "Login successful",
+    "registerSuccess": "Registration successful",
+    "logoutSuccess": "Logged out successfully",
+    "loginFailed": "Login failed",
+    "registerFailed": "Registration failed"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Settings",
+    "modelConfig": "Model Config",
+    "modelConfigDesc": "Manage models and API settings",
+    "assetLibrary": "Asset Library",
+    "assetLibraryDesc": "Browse and reuse character and scene assets",
+    "exportData": "Export Data",
+    "exportDataDesc": "Export all projects and asset library backup",
+    "importData": "Import Data",
+    "importDataDesc": "Import all projects and asset library backup"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "switchToLight": "Switch to light theme",
+    "switchToDark": "Switch to dark theme"
+  },
+  "language": {
+    "switch": "Language",
+    "chinese": "Chinese",
+    "english": "English"
+  },
+  "group": {
+    "join": "Join Group",
+    "qrTitle": "Join Group",
+    "qrDesc": "Scan to join product experience group",
+    "qrValid": "QR code validity is subject to actual situation"
+  },
+  "onboarding": {
+    "help": "Help",
+    "viewGuide": "View Guide"
+  },
+  "assetLibrary": {
+    "title": "Asset Library",
+    "subtitle": "Asset Library",
+    "description": "Add characters and scenes to asset library from projects for cross-project reuse",
+    "assets": "assets",
+    "searchPlaceholder": "Search assets...",
+    "allProjects": "All Projects",
+    "all": "All",
+    "character": "Character",
+    "scene": "Scene",
+    "noAssets": "No assets yet. Add assets from project 'Characters & Scenes'.",
+    "useProject": "Use in Project",
+    "delete": "Delete",
+    "unknownProject": "Unknown Project"
+  },
+  "import": {
+    "title": "Select Project",
+    "description": "Import asset to the following project",
+    "noProjects": "No projects available"
+  },
+  "backup": {
+    "exportSuccess": "Export complete, backup file downloaded.",
+    "exportFailed": "Export failed",
+    "importSuccess": "Import complete",
+    "importFailed": "Import failed",
+    "importConfirm": "Will import {{projects}} projects and {{assets}} assets. Existing data with conflicting IDs will be overwritten. Continue?",
+    "importResult": "Import complete: {{projects}} projects, {{assets}} assets."
+  },
+  "errors": {
+    "deleteProjectFailed": "Failed to delete project",
+    "deleteAssetFailed": "Failed to delete asset",
+    "importFailed": "Import failed",
+    "exportFailed": "Export failed"
+  }
+}
