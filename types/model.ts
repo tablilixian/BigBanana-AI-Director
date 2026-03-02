@@ -177,6 +177,8 @@ export interface ImageGenerateOptions {
   prompt: string;
   referenceImages?: string[];
   aspectRatio?: AspectRatio;
+  resourceType?: string;  // 资源类型：character, scene, prop, keyframe等
+  resourceId?: string;    // 资源ID：用于构建存储路径
 }
 
 /**

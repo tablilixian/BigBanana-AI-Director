@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Plus, Trash2, Loader2, Folder, ChevronRight, Calendar, AlertTriangle, X, HelpCircle, Cpu, Archive, Search, Users, MapPin, Database, Settings, Sun, Moon, LogOut, User } from 'lucide-react';
 import { ProjectState, AssetLibraryItem, Character, Scene } from '../types';
 import { getAllProjectsMetadata, createNewProjectState, deleteProjectFromDB, getAllAssetLibraryItems, deleteAssetFromLibrary, loadProjectFromDB, saveProjectToDB, exportIndexedDBData, importIndexedDBData } from '../services/storageService';
+import { hybridStorage } from '../services/hybridStorageService';
 import { applyLibraryItemToProject } from '../services/assetLibraryService';
 import { useAlert } from './GlobalAlert';
 import { useTheme } from '../contexts/ThemeContext';
@@ -36,16 +37,29 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
   const [isDataExporting, setIsDataExporting] = useState(false);
   const [isDataImporting, setIsDataImporting] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const isLoadingRef = useRef(false);
 
   const loadProjects = async () => {
+    // 防止重复加载
+    if (isLoadingRef.current) {
+      console.log('[Dashboard] 正在加载项目，跳过重复请求');
+      return;
+    }
+    
+    isLoadingRef.current = true;
     setIsLoading(true);
+    
     try {
-      const list = await getAllProjectsMetadata();
+      const list = await hybridStorage.getAllProjects();
       setProjects(list);
     } catch (e) {
       console.error("Failed to load projects", e);
     } finally {
       setIsLoading(false);
+      // 延迟重置loading标志，防止快速连续调用
+      setTimeout(() => {
+        isLoadingRef.current = false;
+      }, 500);
     }
   };
 
@@ -63,6 +77,15 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
 
   useEffect(() => {
     loadProjects();
+  }, [user]); // 依赖 user，登录后自动刷新
+
+  // 监听云端同步完成事件
+  useEffect(() => {
+    const handleSync = () => {
+      loadProjects();
+    };
+    window.addEventListener('projects-synced', handleSync);
+    return () => window.removeEventListener('projects-synced', handleSync);
   }, []);
 
   useEffect(() => {
@@ -77,6 +100,11 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
   };
 
   const requestDelete = (e: React.MouseEvent, id: string) => {
+    // 验证项目ID
+    if (!id) {
+      console.error('❌ 无法删除项目: 项目ID无效');
+      return;
+    }
     e.stopPropagation();
     setDeleteConfirmId(id);
   };
@@ -87,6 +115,13 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
   };
 
   const confirmDelete = async (e: React.MouseEvent, id: string) => {
+    // 验证项目ID
+    if (!id) {
+      console.error('❌ 无法删除项目: 项目ID无效');
+      showAlert('无法删除项目: 项目ID无效', { type: 'error' });
+      return;
+    }
+    
     e.stopPropagation();
     
     // 获取项目名称用于提示
@@ -95,7 +130,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
     
     try {
         console.log('📋 准备删除项目及所有关联资源...');
-        await deleteProjectFromDB(id);
+        await hybridStorage.deleteProject(id);
         console.log('💾 重新加载项目列表...');
         await loadProjects();
         console.log(`✅ 项目 "${projectName}" 已成功删除`);

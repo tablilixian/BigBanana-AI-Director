@@ -128,7 +128,9 @@ export const generateImage = async (
   referenceImages: string[] = [],
   aspectRatio: AspectRatio = '16:9',
   isVariation: boolean = false,
-  hasTurnaround: boolean = false
+  hasTurnaround: boolean = false,
+  resourceType?: string,
+  resourceId?: string
 ): Promise<string> => {
   const startTime = Date.now();
 
@@ -170,6 +172,8 @@ Scene consistency requirements:
       prompt: finalPrompt,
       referenceImages,
       aspectRatio,
+      resourceType,
+      resourceId,
     });
 
     addRenderLogWithTokens({
@@ -593,13 +597,123 @@ Output ONLY the visual prompt (no explanations, no JSON format). Length: 200-400
  * 生成所有视觉提示词
  * 批量生成角色和场景的视觉提示词
  */
-export const generateVisualPrompts = async (
+/**
+ * 生成单个角色或场景的视觉提示词（包含正负提示词）
+ * 用于剧本解析阶段逐个生成视觉描述
+ */
+export const generateVisualPrompt = async (
+  type: 'character' | 'scene',
+  item: Character | Scene,
+  genre: string,
+  model: string = 'gpt-5.1',
+  visualStyle: string = 'anime',
+  language: string = '中文',
+  artDirection: ArtDirection
+): Promise<{ visualPrompt: string; negativePrompt: string }> => {
+  console.log(`🎨 generateVisualPrompt 调用 - 生成${type === 'character' ? '角色' : '场景'}视觉提示词`);
+  logScriptProgress(`正在生成${type === 'character' ? '角色' : '场景'}视觉提示词...`);
+
+  const stylePrompt = getStylePrompt(visualStyle);
+
+  const itemInfo = type === 'character' 
+    ? `Name: ${(item as Character).name}
+Gender: ${(item as Character).gender}
+Age: ${(item as Character).age}
+Personality: ${(item as Character).personality}`
+    : `Location: ${(item as Scene).location}
+Time: ${(item as Scene).time}
+Atmosphere: ${(item as Scene).atmosphere}`;
+
+  const prompt = `You are a world-class visual prompt engineer for ${visualStyle} productions.
+Your task is to create a detailed visual prompt for generating a ${type} image in a ${genre} production.
+
+## ${type === 'character' ? 'Character' : 'Scene'} Information
+${itemInfo}
+Visual Style: ${visualStyle} (${stylePrompt})
+
+## Art Direction Guidelines
+${artDirection.consistencyAnchors}
+
+## Design Rules
+${artDirection.characterDesignRules.proportions}
+${artDirection.characterDesignRules.eyeStyle}
+${artDirection.characterDesignRules.lineWeight}
+${artDirection.characterDesignRules.detailLevel}
+
+## Color Palette Guidelines
+- Primary: ${artDirection.colorPalette.primary}
+- Secondary: ${artDirection.colorPalette.secondary}
+- Accent: ${artDirection.colorPalette.accent}
+- Skin Tones: ${artDirection.colorPalette.skinTones}
+- Saturation: ${artDirection.colorPalette.saturation}
+- Temperature: ${artDirection.colorPalette.temperature}
+
+## Lighting & Texture
+- Lighting Style: ${artDirection.lightingStyle}
+- Texture Style: ${artDirection.textureStyle}
+
+## Mood Keywords
+${artDirection.moodKeywords.join(', ')}
+
+## Your Task
+Create a comprehensive visual prompt that will be used to generate a ${type} image.
+
+CRITICAL REQUIREMENTS:
+1. Describe the ${type} in DETAIL:
+   ${type === 'character' ? `
+   - Facial features (eyes, nose, mouth, eyebrows, expression)
+   - Hair (length, color, texture, style, accessories)
+   - Body type and proportions
+   - Clothing/outfit (style, color, materials, accessories)` : `
+   - Environment details (background, foreground, middle ground)
+   - Atmospheric elements (weather, lighting, mood)
+   - Composition and framing
+   - Objects and props in the scene`}
+   
+2. Apply Art Direction:
+   - Follow the color palette guidelines
+   - Use the specified lighting style
+   - Apply the texture style
+   - Incorporate the mood keywords
+   
+3. Be Specific and Actionable:
+   - Use concrete, descriptive language suitable for image generation AI
+   - Include specific details about materials, textures, and lighting
+   - Describe the pose and composition
+   
+4. Language:
+   - Write the prompt in ${language}
+   - Use natural, flowing language
+
+Output the result in the following JSON format:
+{
+  "visualPrompt": "detailed visual prompt (200-400 words)",
+  "negativePrompt": "negative prompt describing what to avoid (50-100 words)"
+}`;
+
+  try {
+    const responseText = await retryOperation(() => chatCompletion(prompt, model, 0.4, 4096));
+    const cleanedText = cleanJsonString(responseText);
+    const result = JSON.parse(cleanedText);
+
+    console.log(`✅ ${type === 'character' ? '角色' : '场景'}视觉提示词生成完成`);
+    return {
+      visualPrompt: result.visualPrompt || '',
+      negativePrompt: result.negativePrompt || ''
+    };
+  } catch (error: any) {
+    console.error(`❌ ${type === 'character' ? '角色' : '场景'}视觉提示词生成失败:`, error);
+    throw new Error(`${type === 'character' ? '角色' : '场景'}视觉提示词生成失败: ${error.message}`);
+  }
+};
+
+export async function generateVisualPrompts(
   characters: Character[],
   scenes: Scene[],
   artDirection: ArtDirection,
   language: string = '中文',
   model: string = 'gpt-5.1'
-): Promise<{ characters: string[]; scenes: string[] }> => {
+): Promise<{ characters: string[]; scenes: string[] }> {
   console.log('🎨 generateVisualPrompts 调用 - 批量生成视觉提示词');
 
   const characterPromises = characters.map(char => 

@@ -7,6 +7,7 @@ import { DEFAULTS } from './constants';
 import ConfigPanel from './ConfigPanel';
 import ScriptEditor from './ScriptEditor';
 import SceneBreakdown from './SceneBreakdown';
+import { saveProject as saveProjectToCloud } from '../../services/hybridStorageService';
 
 interface Props {
   project: ProjectState;
@@ -140,12 +141,23 @@ const StageScript: React.FC<Props> = ({ project, updateProject, onShowModelConfi
       setProcessingMessage('正在生成分镜...');
       const shots = await generateShotList(scriptData, finalModel);
 
-      updateProject({ 
+      const updatedProject: ProjectState = {
+        ...project,
         scriptData, 
         shots, 
         isParsingScript: false,
         title: scriptData.title 
-      });
+      };
+      
+      updateProject(updatedProject);
+      
+      // 立即保存到云端
+      try {
+        await saveProjectToCloud(updatedProject);
+        console.log('✅ 分镜生成完成，已保存到云端');
+      } catch (error) {
+        console.error('❌ 保存分镜失败:', error);
+      }
       
       setActiveTab('script');
 

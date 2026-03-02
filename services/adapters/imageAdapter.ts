@@ -6,6 +6,8 @@
 import { ImageModelDefinition, ImageGenerateOptions, AspectRatio } from '../../types/model';
 import { getApiKeyForModel, getApiBaseUrlForModel, getActiveImageModel, getProviderById } from '../modelRegistry';
 import { ApiKeyError } from './chatAdapter';
+import { storageApi } from '../../src/api/storage';
+import { useAuthStore } from '../../src/stores/authStore';
 
 /**
  * 重试操作
@@ -22,14 +24,25 @@ const retryOperation = async <T>(
       return await operation();
     } catch (error: any) {
       lastError = error;
-      // 400/401/403 错误不重试
-      if (error.message?.includes('400') || 
+      // 400/401/403/422 错误不重试（客户端错误，重试无意义）
+      // 429 限流错误会重试
+      const isClientError = error.message?.includes('400') || 
           error.message?.includes('401') || 
-          error.message?.includes('403')) {
+          error.message?.includes('403') ||
+          error.message?.includes('422') ||
+          error.message?.includes('不安全') ||
+          error.message?.includes('敏感') ||
+          error.message?.includes('违规');
+      
+      if (isClientError) {
+        console.log(`[Retry] 检测到客户端错误，不再重试: ${error.message}`);
         throw error;
       }
+      
       if (i < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+        const retryDelay = delay * (i + 1);
+        console.log(`[Retry] 第 ${i + 1}/${maxRetries} 次重试，${retryDelay}ms后重试...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
       }
     }
   }
@@ -96,7 +109,7 @@ const callCogViewApi = async (
     return await res.json();
   });
 
-  // BigModel 返回图片 URL，需要下载并转换为 base64
+  // BigModel 返回图片 URL，需要下载并上传到 Supabase Storage
   const imageUrl = response.data?.[0]?.url;
   if (!imageUrl) {
     throw new Error('图片生成失败：未能从响应中提取图片 URL');
@@ -113,14 +126,29 @@ const callCogViewApi = async (
   }
 
   const imageBlob = await imageResponse.blob();
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      resolve(reader.result as string);
-    };
-    reader.onerror = () => reject(new Error('图片转换失败'));
-    reader.readAsDataURL(imageBlob);
+  
+  // 上传到 Supabase Storage
+  const user = useAuthStore.getState().user;
+  if (!user) {
+    throw new Error('用户未登录，无法上传图片');
+  }
+
+  // 生成文件名
+  const timestamp = Date.now();
+  const fileName = `${timestamp}.png`;
+  
+  // 将 Blob 转换为 File
+  const file = new File([imageBlob], fileName, { type: 'image/png' });
+  
+  // 上传到 Storage
+  const publicUrl = await storageApi.uploadImage(user.id, file, {
+    bucket: 'projects',
+    path: `images/${options.resourceType || 'general'}/${options.resourceId || 'temp'}`
   });
+  
+  console.log(`[ImageAdapter] 图片已上传到 Storage: ${publicUrl}`);
+  
+  return publicUrl;
 };
 
 /**
@@ -217,7 +245,7 @@ const callGeminiApi = async (
 
     if (!res.ok) {
       if (res.status === 400) {
-        throw new Error('提示词可能包含不安全或违规内容，未能处理。请修改后重试。');
+        throw new Error('提示词可能包含不安全或违规内容，未能处理。\n\n建议：\n1. 避免使用武器、暴力等敏感词汇\n2. 使用更温和的描述方式\n3. 例如：将"警员"改为"年轻男子"，"手枪"改为"道具"\n\n请修改后重试。');
       }
       if (res.status === 500) {
         throw new Error('当前请求较多，暂时未能处理成功，请稍后重试。');
@@ -239,15 +267,53 @@ const callGeminiApi = async (
 
   // 提取 base64 图片
   const candidates = response.candidates || [];
+  let base64Image: string | undefined;
+  
   if (candidates.length > 0 && candidates[0].content && candidates[0].content.parts) {
     for (const part of candidates[0].content.parts) {
       if (part.inlineData) {
-        return `data:image/png;base64,${part.inlineData.data}`;
+        base64Image = `data:image/png;base64,${part.inlineData.data}`;
+        break;
       }
     }
   }
 
-  throw new Error('图片生成失败：未能从响应中提取图片数据');
+  if (!base64Image) {
+    throw new Error('图片生成失败：未能从响应中提取图片数据');
+  }
+
+  // 将 base64 转换为 Blob
+  const base64Data = base64Image.split(',')[1];
+  const byteCharacters = atob(base64Data);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+  const imageBlob = new Blob([byteArray], { type: 'image/png' });
+
+  // 上传到 Supabase Storage
+  const user = useAuthStore.getState().user;
+  if (!user) {
+    throw new Error('用户未登录，无法上传图片');
+  }
+
+  // 生成文件名
+  const timestamp = Date.now();
+  const fileName = `${timestamp}.png`;
+  
+  // 将 Blob 转换为 File
+  const file = new File([imageBlob], fileName, { type: 'image/png' });
+  
+  // 上传到 Storage
+  const publicUrl = await storageApi.uploadImage(user.id, file, {
+    bucket: 'projects',
+    path: `images/${options.resourceType || 'general'}/${options.resourceId || 'temp'}`
+  });
+  
+  console.log(`[ImageAdapter] Gemini图片已上传到 Storage: ${publicUrl}`);
+  
+  return publicUrl;
 };
 
 /**

@@ -246,7 +246,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         enhancedPrompt += '. IMPORTANT: This is a pure environment/background scene with absolutely NO people, NO human figures, NO characters, NO silhouettes, NO crowds - empty scene only.';
       }
 
-      const imageUrl = await generateImage(enhancedPrompt, [], aspectRatio);
+      const imageUrl = await generateImage(enhancedPrompt, [], aspectRatio, false, false, type, id);
 
       // 更新状态
       if (project.scriptData) {
@@ -706,7 +706,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         prompt = `A detailed product shot of "${prop.name}". ${prop.description || ''}. Category: ${prop.category}. High quality, studio lighting, clean background, detailed texture and material rendering.`;
       }
 
-      const imageUrl = await generateImage(prompt, [], aspectRatio);
+      const imageUrl = await generateImage(prompt, [], aspectRatio, false, false, 'prop', propId);
 
       // 更新状态
       const updatedData = { ...project.scriptData };
@@ -899,7 +899,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       const enhancedPrompt = `${regionalPrefix}Character "${char.name}" wearing NEW OUTFIT: ${variation.visualPrompt}. This is a costume/outfit change - the character's face and identity must remain identical to the reference, but they should be wearing the described new outfit.`;
       
       // 使用选择的横竖屏比例，启用变体模式
-      const imageUrl = await generateImage(enhancedPrompt, refImages, aspectRatio, true);
+      const imageUrl = await generateImage(enhancedPrompt, refImages, aspectRatio, true, false, 'character-variation', varId);
 
       const newData = { ...project.scriptData! };
       const c = newData.characters.find(c => compareIds(c.id, charId));

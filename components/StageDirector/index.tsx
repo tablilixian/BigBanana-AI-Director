@@ -29,6 +29,7 @@ import NineGridPreview from './NineGridPreview';
 import { useAlert } from '../GlobalAlert';
 import { AspectRatioSelector } from '../AspectRatioSelector';
 import { getUserAspectRatio, setUserAspectRatio, getModelById } from '../../services/modelRegistry';
+import { saveProject as saveProjectToCloud } from '../../services/hybridStorageService';
 
 interface Props {
   project: ProjectState;
@@ -215,15 +216,25 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     try {
       const refResult = getRefImagesForShot(shot, project.scriptData);
       // 使用当前设置的横竖屏比例生成关键帧，传递 hasTurnaround 标记
-      const url = await generateImage(prompt, refResult.images, keyframeAspectRatio, false, refResult.hasTurnaround);
+      const url = await generateImage(prompt, refResult.images, keyframeAspectRatio, false, refResult.hasTurnaround, 'keyframe', shot.id);
 
-      updateProject((prevProject: ProjectState) => ({
-        ...prevProject,
-        shots: prevProject.shots.map(s => {
+      const updatedProject = {
+        ...project,
+        shots: project.shots.map(s => {
           if (s.id !== shot.id) return s;
           return updateKeyframeInShot(s, type, createKeyframe(kfId, type, prompt, url, 'completed'));
         })
-      }));
+      };
+
+      updateProject(updatedProject);
+
+      // 立即保存到云端
+      try {
+        await saveProjectToCloud(updatedProject);
+        console.log(`✅ 关键帧生成完成 (${type})，已保存到云端`);
+      } catch (error) {
+        console.error('❌ 保存关键帧失败:', error);
+      }
     } catch (e: any) {
       console.error(e);
       updateProject((prevProject: ProjectState) => ({
@@ -261,14 +272,24 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
         const existingKf = shot.keyframes?.find(k => k.type === type);
         const kfId = existingKf?.id || generateId(`kf-${shot.id}-${type}`);
         
-        updateProject((prevProject: ProjectState) => ({
-          ...prevProject,
-          shots: prevProject.shots.map(s => {
+        const updatedProject = {
+          ...project,
+          shots: project.shots.map(s => {
             if (s.id !== shot.id) return s;
             const visualPrompt = existingKf?.visualPrompt || shot.actionSummary;
             return updateKeyframeInShot(s, type, createKeyframe(kfId, type, visualPrompt, base64Url, 'completed'));
           })
-        }));
+        };
+
+        updateProject(updatedProject);
+
+        // 立即保存到云端
+        try {
+          await saveProjectToCloud(updatedProject);
+          console.log(`✅ 关键帧上传完成 (${type})，已保存到云端`);
+        } catch (error) {
+          console.error('❌ 保存关键帧失败:', error);
+        }
       } catch (error) {
         showAlert('读取文件失败！', { type: 'error' });
       }
@@ -348,6 +369,26 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
         duration
       );
 
+      const updatedProject = {
+        ...project,
+        shots: project.shots.map(s => {
+          if (s.id !== shot.id) return s;
+          return {
+            ...s,
+            interval: s.interval ? { ...s.interval, videoUrl, status: 'completed' } : {
+              id: intervalId,
+              startKeyframeId: sKf?.id || '',
+              endKeyframeId: eKf?.id || '',
+              duration: 10,
+              motionStrength: 5,
+              videoPrompt,
+              videoUrl,
+              status: 'completed'
+            }
+          };
+        })
+      };
+
       updateShot(shot.id, (s) => ({
         ...s,
         interval: s.interval ? { ...s.interval, videoUrl, status: 'completed' } : {
@@ -361,6 +402,14 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
           status: 'completed'
         }
       }));
+
+      // 立即保存到云端
+      try {
+        await saveProjectToCloud(updatedProject);
+        console.log(`✅ 视频生成完成，已保存到云端`);
+      } catch (error) {
+        console.error('❌ 保存视频失败:', error);
+      }
     } catch (e: any) {
       console.error(e);
       updateShot(shot.id, (s) => ({
@@ -868,7 +917,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
       const refResult = getRefImagesForShot(activeShot, project.scriptData);
       
       // 3. 生成九宫格图片
-      const imageUrl = await generateNineGridImage(confirmedPanels, refResult.images, visualStyle, keyframeAspectRatio);
+      const imageUrl = await generateNineGridImage(confirmedPanels, refResult.images, visualStyle, keyframeAspectRatio, activeShot.id);
       
       // 4. 更新状态为完成
       updateShot(activeShot.id, (s) => ({

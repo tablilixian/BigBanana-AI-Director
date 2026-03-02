@@ -90,6 +90,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           profile,
           loading: false 
         })
+        
+        // 登录成功后触发云端同步
+        setTimeout(() => {
+          import('../../services/hybridStorageService').then(({ syncFromCloud }) => {
+            syncFromCloud().then((count: number) => {
+              if (count > 0) {
+                console.log(`[Auth] 登录同步完成: ${count} 个项目`)
+                window.dispatchEvent(new CustomEvent('projects-synced'))
+              }
+            }).catch(console.error)
+          }).catch(console.error)
+        }, 100)
       }
     } catch (error: any) {
       set({ loading: false, error: error.message })

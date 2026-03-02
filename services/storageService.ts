@@ -268,7 +268,13 @@ export const deleteAssetFromLibrary = async (id: string): Promise<void> => {
  * - 渲染日志 (RenderLog[])
  * @param id - 项目ID
  */
-export const deleteProjectFromDB = async (id: string): Promise<void> => {
+  export const deleteProjectFromDB = async (id: string): Promise<void> => {
+  // 验证项目ID
+  if (!id || typeof id !== 'string') {
+    console.error('❌ 无效的项目ID:', id);
+    throw new Error('无效的项目ID');
+  }
+  
   console.log(`🗑️ 开始删除项目: ${id}`);
   
   const db = await openDB();
@@ -383,17 +389,18 @@ export const convertImageToBase64 = (file: File): Promise<string> => {
 
 // Initial template for new projects
 export const createNewProjectState = (): ProjectState => {
-  const id = 'proj_' + Date.now().toString(36);
+  const id = crypto.randomUUID();
   return {
     id,
     title: '未命名项目',
     createdAt: Date.now(),
     lastModified: Date.now(),
+    version: 1,
     stage: 'script',
-    targetDuration: '60s', // Default duration now 60s
-    language: '中文', // Default language
-    visualStyle: 'live-action', // Default visual style
-    shotGenerationModel: 'gpt-5.1', // Default model
+    targetDuration: '60s',
+    language: '中文',
+    visualStyle: 'live-action',
+    shotGenerationModel: 'gpt-5.1',
     rawScript: `标题：示例剧本
 
 场景 1
@@ -406,6 +413,6 @@ export const createNewProjectState = (): ProjectState => {
     scriptData: null,
     shots: [],
     isParsingScript: false,
-    renderLogs: [], // Initialize empty render logs array
+    renderLogs: [],
   };
 };

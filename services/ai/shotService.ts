@@ -779,7 +779,8 @@ export const generateNineGridImage = async (
   panels: NineGridPanel[],
   referenceImages: string[] = [],
   visualStyle: string,
-  aspectRatio: AspectRatio = '16:9'
+  aspectRatio: AspectRatio = '16:9',
+  shotId?: string
 ): Promise<string> => {
   const startTime = Date.now();
   console.log('🎬 九宫格分镜 - 开始生成九宫格图片...');
@@ -815,7 +816,7 @@ CRITICAL REQUIREMENTS:
 - The overall image should read as a professional cinematographer's shot planning board`;
 
   try {
-    const imageUrl = await generateImage(nineGridPrompt, referenceImages, aspectRatio);
+    const imageUrl = await generateImage(nineGridPrompt, referenceImages, aspectRatio, false, false, 'ninegrid', shotId);
     const duration = Date.now() - startTime;
 
     console.log(`✅ 九宫格分镜 - 图片生成完成，耗时: ${duration}ms`);
