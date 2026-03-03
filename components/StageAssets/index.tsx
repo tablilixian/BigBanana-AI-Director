@@ -120,7 +120,49 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       
       updateProject({ scriptData: newData });
     }
-  }, [project.id]); // 仅在项目ID变化时运行，避免重复执行
+  }, [project.id]);
+
+  // 定期检测卡住的生成状态（每10秒检测一次）
+  useEffect(() => {
+    if (!project.scriptData) return;
+    
+    const checkStuckGeneration = () => {
+      const stuckChars = project.scriptData!.characters.filter(c => c.status === 'generating' && !c.referenceImage);
+      const stuckScenes = project.scriptData!.scenes.filter(s => s.status === 'generating' && !s.referenceImage);
+      const stuckProps = (project.scriptData!.props || []).filter(p => p.status === 'generating' && !p.referenceImage);
+      
+      if (stuckChars.length > 0 || stuckScenes.length > 0 || stuckProps.length > 0) {
+        console.log('🔧 检测到卡住的生成状态，自动重置...');
+        const newData = { ...project.scriptData! };
+        
+        newData.characters = newData.characters.map(char => ({
+          ...char,
+          status: char.status === 'generating' && !char.referenceImage ? 'failed' as const : char.status,
+          variations: char.variations?.map(v => ({
+            ...v,
+            status: v.status === 'generating' && !v.referenceImage ? 'failed' as const : v.status
+          }))
+        }));
+        
+        newData.scenes = newData.scenes.map(scene => ({
+          ...scene,
+          status: scene.status === 'generating' && !scene.referenceImage ? 'failed' as const : scene.status
+        }));
+        
+        if (newData.props) {
+          newData.props = newData.props.map(prop => ({
+            ...prop,
+            status: prop.status === 'generating' && !prop.referenceImage ? 'failed' as const : prop.status
+          }));
+        }
+        
+        updateProject({ scriptData: newData });
+      }
+    };
+    
+    const intervalId = setInterval(checkStuckGeneration, 10000);
+    return () => clearInterval(intervalId);
+  }, [project.id]);
 
   /**
    * 上报生成状态给父组件，用于导航锁定

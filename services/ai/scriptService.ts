@@ -13,7 +13,7 @@ import {
   logScriptProgress,
 } from './apiCore';
 import { getStylePrompt } from './promptConstants';
-import { generateArtDirection, generateAllCharacterPrompts, generateVisualPrompts } from './visualService';
+import { generateArtDirection, generateAllCharacterPrompts, generateVisualPrompt } from './visualService';
 
 // Re-export 日志回调函数（保持外部 API 兼容）
 export { setScriptLogCallback, clearScriptLogCallback, logScriptProgress } from './apiCore';
@@ -129,7 +129,7 @@ export const parseScriptToData = async (
               await new Promise(resolve => setTimeout(resolve, 1500));
               console.log(`  重新生成角色提示词: ${char.name}`);
               logScriptProgress(`重新生成角色视觉提示词：${char.name}`);
-              const prompts = await generateVisualPrompts('character', char, genre, model, visualStyle, language, artDirection);
+              const prompts = await generateVisualPrompt('character', char, genre, model, visualStyle, language, artDirection);
               char.visualPrompt = prompts.visualPrompt;
               char.negativePrompt = prompts.negativePrompt;
             } catch (e) {
@@ -144,7 +144,7 @@ export const parseScriptToData = async (
             if (i > 0) await new Promise(resolve => setTimeout(resolve, 1500));
             console.log(`  生成角色提示词: ${characters[i].name}`);
             logScriptProgress(`生成角色视觉提示词：${characters[i].name}`);
-            const prompts = await generateVisualPrompts('character', characters[i], genre, model, visualStyle, language, artDirection);
+            const prompts = await generateVisualPrompt('character', characters[i], genre, model, visualStyle, language, artDirection);
             characters[i].visualPrompt = prompts.visualPrompt;
             characters[i].negativePrompt = prompts.negativePrompt;
           } catch (e2) {
@@ -158,7 +158,7 @@ export const parseScriptToData = async (
           if (i > 0) await new Promise(resolve => setTimeout(resolve, 1500));
           console.log(`  生成角色提示词: ${characters[i].name}`);
           logScriptProgress(`生成角色视觉提示词：${characters[i].name}`);
-          const prompts = await generateVisualPrompts('character', characters[i], genre, model, visualStyle, language);
+          const prompts = await generateVisualPrompt('character', characters[i], genre, model, visualStyle, language);
           characters[i].visualPrompt = prompts.visualPrompt;
           characters[i].negativePrompt = prompts.negativePrompt;
         } catch (e) {
@@ -173,7 +173,7 @@ export const parseScriptToData = async (
         if (i > 0 || characters.length > 0) await new Promise(resolve => setTimeout(resolve, 1500));
         console.log(`  生成场景提示词: ${scenes[i].location}`);
         logScriptProgress(`生成场景视觉提示词：${scenes[i].location}`);
-        const prompts = await generateVisualPrompts('scene', scenes[i], genre, model, visualStyle, language, artDirection);
+        const prompts = await generateVisualPrompt('scene', scenes[i], genre, model, visualStyle, language, artDirection);
         scenes[i].visualPrompt = prompts.visualPrompt;
         scenes[i].negativePrompt = prompts.negativePrompt;
       } catch (e) {

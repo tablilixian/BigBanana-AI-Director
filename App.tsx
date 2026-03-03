@@ -11,6 +11,7 @@ import ModelConfigModal from './components/ModelConfig';
 import { ProjectState } from './types';
 import { Save, CheckCircle } from 'lucide-react';
 import { saveProjectToDB } from './services/storageService';
+import { hybridStorage } from './services/hybridStorageService';
 import { setGlobalApiKey } from './services/aiService';
 import { setLogCallback, clearLogCallback } from './services/renderLogService';
 import { useAlert } from './components/GlobalAlert';
@@ -174,7 +175,7 @@ function App() {
     saveTimeoutRef.current = setTimeout(async () => {
       setSaveStatus('saving');
       try {
-        await saveProjectToDB(project);
+        await hybridStorage.saveProject(project);
         setSaveStatus('saved');
       } catch (e) {
         console.error("Auto-save failed", e);
@@ -251,7 +252,7 @@ function App() {
         onConfirm: async () => {
           setIsGenerating(false);
           if (project) {
-            await saveProjectToDB(project);
+            await hybridStorage.saveProject(project);
           }
           setProject(null);
         }
@@ -259,7 +260,7 @@ function App() {
       return;
     }
     if (project) {
-        await saveProjectToDB(project);
+        await hybridStorage.saveProject(project);
     }
     setProject(null);
   };

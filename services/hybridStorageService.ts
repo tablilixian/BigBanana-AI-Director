@@ -77,6 +77,7 @@ export interface CloudProject {
   description?: string;
   status: string;
   settings: ProjectState | null;
+  data: ProjectState | null;
   created_at: string;
   updated_at: string;
 }
@@ -148,19 +149,44 @@ class HybridStorageService {
     }
 
     try {
-      // 优先从 Supabase 获取
-      const { data, error } = await supabase
-        .from('projects')
-        .select('id, title, settings, updated_at')
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false });
 
-      if (error) throw error;
+      // 检查 supabase 客户端是否有效
+      if (!supabase || !supabase.from || typeof supabase.from !== 'function') {
+        console.warn('[HybridStorage] Supabase 客户端无效 (from 不是函数)，回退到本地 IndexedDB');
+        return getAllProjectsMetadata();
+      }
+      
+      // 尝试调用 supabase.from 验证客户端
+      try {
+        const testQuery = supabase.from('projects');
+        if (!testQuery || typeof testQuery.select !== 'function') {
+          console.warn('[HybridStorage] Supabase 客户端无效 (select 不是函数)，回退到本地 IndexedDB');
+          return getAllProjectsMetadata();
+        }
+      } catch (e) {
+        console.warn('[HybridStorage] Supabase 客户端测试失败，回退到本地 IndexedDB:', e);
+        return getAllProjectsMetadata();
+      }
+      
+      let data;
+      try {
+        const result = await supabase
+          .from('projects')
+          .select('id, title, data, settings, updated_at')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false });
+        
+        if (result.error) throw result.error;
+        data = result.data;
+      } catch (queryError) {
+        console.error('[HybridStorage] 查询云端项目失败:', queryError);
+        return getAllProjectsMetadata();
+      }
 
       if (data && data.length > 0) {
         // 有云端数据，转换为 ProjectState
         const cloudProjects = data
-          .filter(p => p.settings !== null)
+          .filter(p => p.data !== null || p.settings !== null)
           .map(p => this.cloudToProjectState(p as CloudProject));
         
         // 去重：确保项目ID唯一
@@ -320,7 +346,7 @@ class HybridStorageService {
               user_id: user.id,
               title: project.title,
               description: project.rawScript?.substring(0, 500) || null,
-              status: project.stage || 'script',
+              data: updatedProject,
               settings: updatedProject,
               updated_at: new Date().toISOString()
             }, {
@@ -462,6 +488,10 @@ class HybridStorageService {
    * 转换云端数据到 ProjectState
    */
   private cloudToProjectState(cloud: CloudProject): ProjectState {
+    // 优先使用 data 字段，其次使用 settings 字段（向后兼容）
+    if (cloud.data) {
+      return cloud.data;
+    }
     if (cloud.settings) {
       return cloud.settings;
     }

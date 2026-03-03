@@ -229,8 +229,15 @@ export const retryOperation = async <T>(
 export const cleanJsonString = (str: string): string => {
   if (!str) return "{}";
   let cleaned = str.trim();
+  // Remove markdown code block markers
   cleaned = cleaned.replace(/^```(?:json)?\s*/i, '');
   cleaned = cleaned.replace(/```\s*$/, '');
+  // Try to find a valid JSON object in the response
+  // This handles cases where AI returns text before/after the JSON
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    cleaned = jsonMatch[0];
+  }
   return cleaned.trim();
 };
 

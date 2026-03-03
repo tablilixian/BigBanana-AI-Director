@@ -63,6 +63,20 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
     }
   };
 
+  // 安全机制：如果加载状态卡住，定期重置
+  useEffect(() => {
+    const checkStuck = () => {
+      if (isLoadingRef.current && isLoading) {
+        console.log('[Dashboard] 检测到加载卡住，强制重置...');
+        isLoadingRef.current = false;
+        setIsLoading(false);
+      }
+    };
+    
+    const intervalId = setInterval(checkStuck, 5000);
+    return () => clearInterval(intervalId);
+  }, [isLoading]);
+
   const loadLibrary = async () => {
     setIsLibraryLoading(true);
     try {
@@ -129,8 +143,9 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
     const projectName = project?.title || '未命名项目';
     
     try {
-        console.log('📋 准备删除项目及所有关联资源...');
         await hybridStorage.deleteProject(id);
+        // 强制重置 loading 状态，确保能刷新
+        isLoadingRef.current = false;
         console.log('💾 重新加载项目列表...');
         await loadProjects();
         console.log(`✅ 项目 "${projectName}" 已成功删除`);
