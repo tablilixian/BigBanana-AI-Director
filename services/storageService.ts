@@ -1,7 +1,7 @@
 import { ProjectState, AssetLibraryItem } from '../types';
 
 const DB_NAME = 'BigBananaDB';
-const DB_VERSION = 2;
+const DB_VERSION = 4;
 const STORE_NAME = 'projects';
 const ASSET_STORE_NAME = 'assetLibrary';
 const EXPORT_SCHEMA_VERSION = 1;
@@ -33,6 +33,11 @@ const openDB = (): Promise<IDBDatabase> => {
       }
       if (!db.objectStoreNames.contains(ASSET_STORE_NAME)) {
         db.createObjectStore(ASSET_STORE_NAME, { keyPath: 'id' });
+      }
+      // 兼容性：确保 images store 存在（由 imageStorageService 使用）
+      if (!db.objectStoreNames.contains('images')) {
+        const store = db.createObjectStore('images', { keyPath: 'id' });
+        store.createIndex('createdAt', 'createdAt', { unique: false });
       }
     };
   });
@@ -215,18 +220,28 @@ export const loadProjectFromDB = async (id: string): Promise<ProjectState> => {
 };
 
 export const getAllProjectsMetadata = async (): Promise<ProjectState[]> => {
+  console.log('[Storage] 📋 getAllProjectsMetadata 开始执行');
   const db = await openDB();
+  console.log('[Storage] ✅ 数据库已打开');
+  
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readonly');
     const store = tx.objectStore(STORE_NAME);
     const request = store.getAll(); 
+    
     request.onsuccess = () => {
        const projects = request.result as ProjectState[];
+       console.log(`[Storage] ✅ 从 IndexedDB 获取到 ${projects.length} 个项目`);
        // Sort by last modified descending
        projects.sort((a, b) => b.lastModified - a.lastModified);
+       console.log('[Storage] ✅ 项目列表已排序');
        resolve(projects);
     };
-    request.onerror = () => reject(request.error);
+    
+    request.onerror = () => {
+      console.error('[Storage] ❌ 获取项目失败:', request.error);
+      reject(request.error);
+    };
   });
 };
 

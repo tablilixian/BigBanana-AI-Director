@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { User, Check, Shirt, Trash2, Edit2, AlertCircle, FolderPlus, Grid3x3 } from 'lucide-react';
+import { User, Check, Shirt, Trash2, Edit2, AlertCircle, FolderPlus, Grid3x3, Loader2 } from 'lucide-react';
 import { Character } from '../../types';
 import PromptEditor from './PromptEditor';
 import ImageUploadButton from './ImageUploadButton';
+import { useImageLoader } from '../../hooks/useImageLoader';
 
 interface CharacterCardProps {
   character: Character;
@@ -39,6 +40,8 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   const [editName, setEditName] = useState(character.name);
   const [editGender, setEditGender] = useState(character.gender);
   const [editAge, setEditAge] = useState(character.age);
+  
+  const { src: imageSrc, loading: imageLoading } = useImageLoader(character.referenceImage);
 
   const handleSaveName = () => {
     if (editName.trim()) {
@@ -70,13 +73,18 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
             className="aspect-video bg-[var(--bg-elevated)] relative rounded-lg overflow-hidden cursor-pointer"
             onClick={() => character.referenceImage && onImageClick(character.referenceImage)}
           >
-            {character.referenceImage ? (
+            {imageSrc ? (
               <>
-                <img src={character.referenceImage} alt={character.name} className="w-full h-full object-cover" />
+                <img src={imageSrc} alt={character.name} className="w-full h-full object-cover" />
                 <div className="absolute top-1.5 right-1.5 p-1 bg-[var(--accent)] text-[var(--text-primary)] rounded shadow-lg">
                   <Check className="w-3 h-3" />
                 </div>
               </>
+            ) : imageLoading ? (
+              <div className="w-full h-full flex flex-col items-center justify-center text-[var(--text-muted)]">
+                <Loader2 className="w-8 h-8 mb-2 animate-spin text-[var(--accent)]" />
+                <span className="text-[10px] text-[var(--text-tertiary)]">加载中...</span>
+              </div>
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center text-[var(--text-muted)] p-2 text-center">
                 {character.status === 'failed' ? (

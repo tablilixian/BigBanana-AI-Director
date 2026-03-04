@@ -47,21 +47,26 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
     }
     
     console.log('[Dashboard] 📋 开始加载项目列表...');
+    console.log('[Dashboard] 当前用户:', user?.id);
     isLoadingRef.current = true;
     setIsLoading(true);
     
     try {
+      console.log('[Dashboard] 📡 调用 hybridStorage.getAllProjects()...');
       const list = await hybridStorage.getAllProjects();
       console.log(`[Dashboard] ✅ 加载完成，获取到 ${list.length} 个项目`);
       console.log('[Dashboard] 项目列表:', list.map(p => ({ id: p.id, title: p.title, version: p.version })));
       setProjects(list);
     } catch (e) {
       console.error('[Dashboard] ❌ 加载项目失败:', e);
+      console.error('[Dashboard] 错误详情:', e instanceof Error ? e.stack : String(e));
     } finally {
+      console.log('[Dashboard] 🔚 加载流程结束，重置状态');
       setIsLoading(false);
       // 延迟重置loading标志，防止快速连续调用
       setTimeout(() => {
         isLoadingRef.current = false;
+        console.log('[Dashboard] ✅ isLoadingRef 已重置');
       }, 500);
     }
   };

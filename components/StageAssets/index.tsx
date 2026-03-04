@@ -8,6 +8,8 @@ import {
   generateCharacterTurnaroundPanels, 
   generateCharacterTurnaroundImage 
 } from '../../services/aiService';
+import { imageStorageService } from '../../services/imageStorageService';
+import { isLocalImage, getLocalImageId } from '../../utils/imageUtils';
 import { 
   getRegionalPrefix, 
   handleImageUpload, 
@@ -297,12 +299,16 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
           const c = newData.characters.find(c => compareIds(c.id, id));
           if (c) {
             c.referenceImage = imageUrl;
+            c.referenceImageSource = 'local';
+            c.localImageId = imageUrl.startsWith('local:') ? imageUrl.substring(6) : undefined;
             c.status = 'completed';
           }
         } else {
           const s = newData.scenes.find(s => compareIds(s.id, id));
           if (s) {
             s.referenceImage = imageUrl;
+            s.referenceImageSource = 'local';
+            s.localImageId = imageUrl.startsWith('local:') ? imageUrl.substring(6) : undefined;
             s.status = 'completed';
           }
         }
@@ -413,10 +419,38 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     }
   };
 
-  const handleAddCharacterToLibrary = (char: Character) => {
+  const handleAddCharacterToLibrary = async (char: Character) => {
     const saveItem = async () => {
       try {
-        const item = createLibraryItemFromCharacter(char, project);
+        let charToSave = { ...char };
+        
+        // 如果图片是本地的，先上传到云端
+        if (isLocalImage(char.referenceImage) && char.localImageId) {
+          console.log('[StageAssets] ☁️ 上传本地图片到云端...');
+          const blob = await imageStorageService.getImage(char.localImageId);
+          if (blob) {
+            const cloudUrl = await imageStorageService.uploadToCloud(
+              char.localImageId,
+              blob,
+              `users/${project.id}/assets/character/${char.id}`
+            );
+            charToSave.referenceImage = cloudUrl;
+            charToSave.referenceImageSource = 'cloud';
+            delete charToSave.localImageId;
+            
+            // 更新项目中的角色数据
+            const newData = { ...project.scriptData! };
+            const c = newData.characters.find(c => c.id === char.id);
+            if (c) {
+              c.referenceImage = cloudUrl;
+              c.referenceImageSource = 'cloud';
+              delete c.localImageId;
+            }
+            updateProject({ scriptData: newData });
+          }
+        }
+        
+        const item = createLibraryItemFromCharacter(charToSave, project);
         await saveAssetToLibrary(item);
         showAlert(`已加入资产库：${char.name}`, { type: 'success' });
         refreshLibrary();
@@ -437,10 +471,38 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
     void saveItem();
   };
 
-  const handleAddSceneToLibrary = (scene: Scene) => {
+  const handleAddSceneToLibrary = async (scene: Scene) => {
     const saveItem = async () => {
       try {
-        const item = createLibraryItemFromScene(scene, project);
+        let sceneToSave = { ...scene };
+        
+        // 如果图片是本地的，先上传到云端
+        if (isLocalImage(scene.referenceImage) && scene.localImageId) {
+          console.log('[StageAssets] ☁️ 上传本地场景图片到云端...');
+          const blob = await imageStorageService.getImage(scene.localImageId);
+          if (blob) {
+            const cloudUrl = await imageStorageService.uploadToCloud(
+              scene.localImageId,
+              blob,
+              `users/${project.id}/assets/scene/${scene.id}`
+            );
+            sceneToSave.referenceImage = cloudUrl;
+            sceneToSave.referenceImageSource = 'cloud';
+            delete sceneToSave.localImageId;
+            
+            // 更新项目中的场景数据
+            const newData = { ...project.scriptData! };
+            const s = newData.scenes.find(s => s.id === scene.id);
+            if (s) {
+              s.referenceImage = cloudUrl;
+              s.referenceImageSource = 'cloud';
+              delete s.localImageId;
+            }
+            updateProject({ scriptData: newData });
+          }
+        }
+        
+        const item = createLibraryItemFromScene(sceneToSave, project);
         await saveAssetToLibrary(item);
         showAlert(`已加入资产库：${scene.location}`, { type: 'success' });
         refreshLibrary();
@@ -755,6 +817,8 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       const updated = (updatedData.props || []).find(p => compareIds(p.id, propId));
       if (updated) {
         updated.referenceImage = imageUrl;
+        updated.referenceImageSource = 'local';
+        updated.localImageId = imageUrl.startsWith('local:') ? imageUrl.substring(6) : undefined;
         updated.status = 'completed';
         if (!updated.visualPrompt) {
           updated.visualPrompt = prompt;
@@ -823,10 +887,38 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
   /**
    * 加入资产库（道具）
    */
-  const handleAddPropToLibrary = (prop: Prop) => {
+  const handleAddPropToLibrary = async (prop: Prop) => {
     const saveItem = async () => {
       try {
-        const item = createLibraryItemFromProp(prop, project);
+        let propToSave = { ...prop };
+        
+        // 如果图片是本地的，先上传到云端
+        if (isLocalImage(prop.referenceImage) && prop.localImageId) {
+          console.log('[StageAssets] ☁️ 上传本地道具图片到云端...');
+          const blob = await imageStorageService.getImage(prop.localImageId);
+          if (blob) {
+            const cloudUrl = await imageStorageService.uploadToCloud(
+              prop.localImageId,
+              blob,
+              `users/${project.id}/assets/prop/${prop.id}`
+            );
+            propToSave.referenceImage = cloudUrl;
+            propToSave.referenceImageSource = 'cloud';
+            delete propToSave.localImageId;
+            
+            // 更新项目中的道具数据
+            const newData = { ...project.scriptData! };
+            const p = (newData.props || []).find(p => p.id === prop.id);
+            if (p) {
+              p.referenceImage = cloudUrl;
+              p.referenceImageSource = 'cloud';
+              delete p.localImageId;
+            }
+            updateProject({ scriptData: newData });
+          }
+        }
+        
+        const item = createLibraryItemFromProp(propToSave, project);
         await saveAssetToLibrary(item);
         showAlert(`已加入资产库：${prop.name}`, { type: 'success' });
         refreshLibrary();
@@ -948,6 +1040,8 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
       const v = c?.variations?.find(v => compareIds(v.id, varId));
       if (v) {
         v.referenceImage = imageUrl;
+        v.referenceImageSource = 'local';
+        v.localImageId = imageUrl.startsWith('local:') ? imageUrl.substring(6) : undefined;
         v.status = 'completed';
       }
 

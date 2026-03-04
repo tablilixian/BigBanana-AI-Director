@@ -142,6 +142,9 @@ class HybridStorageService {
   async getAllProjects(): Promise<ProjectState[]> {
     const { user } = useAuthStore.getState();
     
+    console.log('[HybridStorage] 📋 getAllProjects 开始执行');
+    console.log('[HybridStorage] 用户状态:', user ? '已登录' : '未登录');
+    
     if (!user) {
       // 未登录，使用本地 IndexedDB
       console.log('[HybridStorage] 未登录，使用本地 IndexedDB');
@@ -149,6 +152,7 @@ class HybridStorageService {
     }
 
     try {
+      console.log('[HybridStorage] 检查 supabase 客户端...');
 
       // 检查 supabase 客户端是否有效
       if (!supabase || !supabase.from || typeof supabase.from !== 'function') {
@@ -168,7 +172,9 @@ class HybridStorageService {
         return getAllProjectsMetadata();
       }
       
-      let data;
+      console.log('[HybridStorage] ✅ Supabase 客户端有效，开始查询云端项目...');
+      
+      let data: CloudProject[] | null = null;
       try {
         const result = await supabase
           .from('projects')
@@ -177,17 +183,21 @@ class HybridStorageService {
           .order('updated_at', { ascending: false });
         
         if (result.error) throw result.error;
-        data = result.data;
+        data = result.data as CloudProject[] | null;
+        console.log('[HybridStorage] ✅ 云端查询完成，返回数据:', data?.length || 0, '条');
       } catch (queryError) {
         console.error('[HybridStorage] 查询云端项目失败:', queryError);
         return getAllProjectsMetadata();
       }
 
       if (data && data.length > 0) {
+        console.log('[HybridStorage] 开始转换云端数据...');
         // 有云端数据，转换为 ProjectState
         const cloudProjects = data
           .filter(p => p.data !== null || p.settings !== null)
-          .map(p => this.cloudToProjectState(p as CloudProject));
+          .map(p => this.cloudToProjectState(p));
+        
+        console.log('[HybridStorage] 转换后项目数:', cloudProjects.length);
         
         // 去重：确保项目ID唯一
         const uniqueProjects = Array.from(
@@ -197,8 +207,12 @@ class HybridStorageService {
         console.log(`[HybridStorage] 从云端获取 ${cloudProjects.length} 个项目，去重后 ${uniqueProjects.length} 个`);
         
         // 同步云端项目到本地（静默同步，不触发重复创建）
-        this.syncCloudToLocal(uniqueProjects);
+        // 不等待同步完成，直接返回云端数据
+        this.syncCloudToLocal(uniqueProjects).catch(err => {
+          console.error('[HybridStorage] 静默同步失败:', err);
+        });
         
+        console.log('[HybridStorage] ✅ getAllProjects 完成，返回云端数据');
         return uniqueProjects;
       }
 

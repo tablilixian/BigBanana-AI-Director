@@ -8,6 +8,7 @@ import { getApiKeyForModel, getApiBaseUrlForModel, getActiveImageModel, getProvi
 import { ApiKeyError } from './chatAdapter';
 import { storageApi } from '../../src/api/storage';
 import { useAuthStore } from '../../src/stores/authStore';
+import { imageStorageService, generateImageId } from '../imageStorageService';
 
 /**
  * 重试操作
@@ -127,28 +128,14 @@ const callCogViewApi = async (
 
   const imageBlob = await imageResponse.blob();
   
-  // 上传到 Supabase Storage
-  const user = useAuthStore.getState().user;
-  if (!user) {
-    throw new Error('用户未登录，无法上传图片');
-  }
-
-  // 生成文件名
-  const timestamp = Date.now();
-  const fileName = `${timestamp}.png`;
+  // 保存到本地 IndexedDB
+  const localImageId = generateImageId();
+  await imageStorageService.saveImage(localImageId, imageBlob);
   
-  // 将 Blob 转换为 File
-  const file = new File([imageBlob], fileName, { type: 'image/png' });
+  console.log(`[ImageAdapter] 图片已保存到本地: ${localImageId}`);
   
-  // 上传到 Storage
-  const publicUrl = await storageApi.uploadImage(user.id, file, {
-    bucket: 'projects',
-    path: `images/${options.resourceType || 'general'}/${options.resourceId || 'temp'}`
-  });
-  
-  console.log(`[ImageAdapter] 图片已上传到 Storage: ${publicUrl}`);
-  
-  return publicUrl;
+  // 返回本地图片 ID，格式为 local:{id}
+  return `local:${localImageId}`;
 };
 
 /**
@@ -292,28 +279,14 @@ const callGeminiApi = async (
   const byteArray = new Uint8Array(byteNumbers);
   const imageBlob = new Blob([byteArray], { type: 'image/png' });
 
-  // 上传到 Supabase Storage
-  const user = useAuthStore.getState().user;
-  if (!user) {
-    throw new Error('用户未登录，无法上传图片');
-  }
-
-  // 生成文件名
-  const timestamp = Date.now();
-  const fileName = `${timestamp}.png`;
+  // 保存到本地 IndexedDB
+  const localImageId = generateImageId();
+  await imageStorageService.saveImage(localImageId, imageBlob);
   
-  // 将 Blob 转换为 File
-  const file = new File([imageBlob], fileName, { type: 'image/png' });
+  console.log(`[ImageAdapter] Gemini图片已保存到本地: ${localImageId}`);
   
-  // 上传到 Storage
-  const publicUrl = await storageApi.uploadImage(user.id, file, {
-    bucket: 'projects',
-    path: `images/${options.resourceType || 'general'}/${options.resourceId || 'temp'}`
-  });
-  
-  console.log(`[ImageAdapter] Gemini图片已上传到 Storage: ${publicUrl}`);
-  
-  return publicUrl;
+  // 返回本地图片 ID，格式为 local:{id}
+  return `local:${localImageId}`;
 };
 
 /**
