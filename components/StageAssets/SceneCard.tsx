@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MapPin, Check, Sparkles, Loader2, Upload, Trash2, Edit2, AlertCircle, FolderPlus } from 'lucide-react';
 import PromptEditor from './PromptEditor';
 import ImageUploadButton from './ImageUploadButton';
+import { useImageLoader } from '../../hooks/useImageLoader';
 
 interface SceneCardProps {
   scene: {
@@ -41,6 +42,8 @@ const SceneCard: React.FC<SceneCardProps> = ({
   const [editTime, setEditTime] = useState(scene.time);
   const [editAtmosphere, setEditAtmosphere] = useState(scene.atmosphere);
 
+  const { src: imageSrc, loading: imageLoading } = useImageLoader(scene.referenceImage);
+
   const handleSaveLocation = () => {
     if (editLocation.trim()) {
       onUpdateInfo({ location: editLocation.trim() });
@@ -66,15 +69,20 @@ const SceneCard: React.FC<SceneCardProps> = ({
     <div className="bg-[var(--bg-surface)] border border-[var(--border-primary)] rounded-xl overflow-hidden flex flex-col group hover:border-[var(--border-secondary)] transition-all hover:shadow-lg">
       <div 
         className="aspect-video bg-[var(--bg-elevated)] relative cursor-pointer"
-        onClick={() => scene.referenceImage && onImageClick(scene.referenceImage)}
+        onClick={() => imageSrc && onImageClick(imageSrc)}
       >
-        {scene.referenceImage ? (
+        {imageSrc ? (
           <>
-            <img src={scene.referenceImage} alt={scene.location} className="w-full h-full object-cover" />
+            <img src={imageSrc} alt={scene.location} className="w-full h-full object-cover" />
             <div className="absolute top-2 right-2 p-1 bg-[var(--accent)] text-[var(--text-primary)] rounded shadow-lg backdrop-blur">
               <Check className="w-3 h-3" />
             </div>
           </>
+        ) : imageLoading ? (
+          <div className="w-full h-full flex flex-col items-center justify-center text-[var(--text-muted)] p-4 text-center">
+            <Loader2 className="w-10 h-10 mb-3 animate-spin text-[var(--accent)]" />
+            <span className="text-[10px] text-[var(--text-tertiary)]">加载中...</span>
+          </div>
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-[var(--text-muted)] p-4 text-center">
             {isGenerating ? (

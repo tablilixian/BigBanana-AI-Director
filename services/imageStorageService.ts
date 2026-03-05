@@ -104,16 +104,21 @@ export const imageStorageService = {
 
     const fileName = `${id}.png`;
     const fullPath = `${path}/${fileName}`;
+    console.log('[ImageStorage] 📁 完整路径:', fullPath);
 
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError, data: uploadData } = await supabase.storage
       .from('projects')
       .upload(fullPath, blob, {
         upsert: true,
         contentType: 'image/png'
       });
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      console.error('[ImageStorage] ❌ 上传失败:', uploadError);
+      throw uploadError;
+    }
 
+    console.log('[ImageStorage] ✅ 上传成功，获取公共URL...');
     const { data: { publicUrl } } = supabase.storage
       .from('projects')
       .getPublicUrl(fullPath);

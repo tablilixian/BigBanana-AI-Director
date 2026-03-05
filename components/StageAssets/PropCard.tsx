@@ -4,6 +4,7 @@ import { Prop } from '../../types';
 import { PROP_CATEGORIES } from './constants';
 import PromptEditor from './PromptEditor';
 import ImageUploadButton from './ImageUploadButton';
+import { useImageLoader } from '../../hooks/useImageLoader';
 
 interface PropCardProps {
   prop: Prop;
@@ -33,6 +34,8 @@ const PropCard: React.FC<PropCardProps> = ({
   const [editName, setEditName] = useState(prop.name);
   const [editDescription, setEditDescription] = useState(prop.description);
 
+  const { src: imageSrc, loading: imageLoading } = useImageLoader(prop.referenceImage);
+
   const handleSaveName = () => {
     if (editName.trim()) {
       onUpdateInfo({ name: editName.trim() });
@@ -49,15 +52,20 @@ const PropCard: React.FC<PropCardProps> = ({
     <div className="bg-[var(--bg-surface)] border border-[var(--border-primary)] rounded-xl overflow-hidden flex flex-col group hover:border-[var(--border-secondary)] transition-all hover:shadow-lg">
       <div 
         className="aspect-video bg-[var(--bg-elevated)] relative cursor-pointer"
-        onClick={() => prop.referenceImage && onImageClick(prop.referenceImage)}
+        onClick={() => imageSrc && onImageClick(imageSrc)}
       >
-        {prop.referenceImage ? (
+        {imageSrc ? (
           <>
-            <img src={prop.referenceImage} alt={prop.name} className="w-full h-full object-cover" />
+            <img src={imageSrc} alt={prop.name} className="w-full h-full object-cover" />
             <div className="absolute top-2 right-2 p-1 bg-[var(--accent)] text-[var(--text-primary)] rounded shadow-lg backdrop-blur">
               <Check className="w-3 h-3" />
             </div>
           </>
+        ) : imageLoading ? (
+          <div className="w-full h-full flex flex-col items-center justify-center text-[var(--text-muted)] p-4 text-center">
+            <Loader2 className="w-10 h-10 mb-3 animate-spin text-[var(--accent)]" />
+            <span className="text-[10px] text-[var(--text-tertiary)]">加载中...</span>
+          </div>
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-[var(--text-muted)] p-4 text-center">
             {isGenerating ? (
