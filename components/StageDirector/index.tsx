@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LayoutGrid, Sparkles, Loader2, AlertCircle, Edit2, Film, Video as VideoIcon } from 'lucide-react';
 import { ProjectState, Shot, Keyframe, AspectRatio, VideoDuration, NineGridPanel, NineGridData } from '../../types';
-import { generateImage, generateVideo, generateActionSuggestion, optimizeKeyframePrompt, optimizeBothKeyframes, enhanceKeyframePrompt, splitShotIntoSubShots, generateNineGridPanels, generateNineGridImage } from '../../services/aiService';
+import { generateImage, generateVideo, generateActionSuggestion, optimizeKeyframePrompt, optimizeBothKeyframes, enhanceKeyframePrompt, splitShotIntoSubShots, generateNineGridPanels, generateNineGridImage, getActiveChatModel, getDefaultChatModelId } from '../../services/aiService';
 import { 
   getRefImagesForShot, 
   getPropsInfoForShot,
@@ -20,6 +20,7 @@ import {
   buildPromptFromNineGridPanel,
   cropPanelFromNineGrid
 } from './utils';
+import { getImageUrl } from '../../utils/imageUtils';
 import { DEFAULTS } from './constants';
 import EditModal from './EditModal';
 import ShotCard from './ShotCard';
@@ -775,7 +776,10 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     }
     
     const visualStyle = project.visualStyle || project.scriptData?.visualStyle || 'live-action';
-    const shotGenerationModel = project.shotGenerationModel || 'gpt-5.1';
+    const activeChatModel = getActiveChatModel();
+    const shotGenerationModel = project.shotGenerationModel || activeChatModel?.id || getDefaultChatModelId();
+    console.log('🎬 九宫格分镜 - shotGenerationModel:', shotGenerationModel, 'activeChatModel:', activeChatModel?.id);
+    console.log('🎬 九宫格分镜 - shotGenerationModel:', shotGenerationModel, 'activeChatModel:', activeChatModel?.id);
     
     // 3. 调用AI拆分
     setIsSplittingShot(true);
@@ -841,7 +845,9 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     }
     
     const visualStyle = project.visualStyle || project.scriptData?.visualStyle || 'live-action';
-    const shotGenerationModel = project.shotGenerationModel || 'gpt-5.1';
+    const activeChatModel = getActiveChatModel();
+    const shotGenerationModel = project.shotGenerationModel || activeChatModel?.id || getDefaultChatModelId();
+    console.log('🎬 九宫格分镜 - shotGenerationModel:', shotGenerationModel, 'activeChatModel:', activeChatModel?.id);
     
     // 3. 显示弹窗并设置生成状态（仅生成面板描述）
     setShowNineGrid(true);
@@ -1001,10 +1007,17 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
     const kfId = existingKf?.id || generateId(`kf-${activeShot.id}-start`);
     
     try {
-      // 2. 从九宫格图片中裁剪出选中的面板
-      const croppedImageUrl = await cropPanelFromNineGrid(activeShot.nineGrid.imageUrl, panel.index);
+      // 2. 获取九宫格图片的实际 URL（处理本地图片）
+      const nineGridImageUrl = await getImageUrl(activeShot.nineGrid.imageUrl);
+      if (!nineGridImageUrl) {
+        showAlert('无法加载九宫格图片', { type: 'error' });
+        return;
+      }
       
-      // 3. 将裁剪后的图片直接设为首帧（九宫格与首帧是替代关系）
+      // 3. 从九宫格图片中裁剪出选中的面板
+      const croppedImageUrl = await cropPanelFromNineGrid(nineGridImageUrl, panel.index);
+      
+      // 4. 将裁剪后的图片直接设为首帧（九宫格与首帧是替代关系）
       updateShot(activeShot.id, (s) => {
         return updateKeyframeInShot(
           s,
@@ -1025,8 +1038,15 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
   /**
    * 九宫格分镜预览 - 整张图直接用作首帧
    */
-  const handleUseWholeNineGridAsFrame = () => {
+  const handleUseWholeNineGridAsFrame = async () => {
     if (!activeShot || !activeShot.nineGrid?.imageUrl) return;
+    
+    // 获取九宫格图片的实际 URL（处理本地图片）
+    const nineGridImageUrl = await getImageUrl(activeShot.nineGrid.imageUrl);
+    if (!nineGridImageUrl) {
+      showAlert('无法加载九宫格图片', { type: 'error' });
+      return;
+    }
     
     const existingKf = activeShot.keyframes?.find(k => k.type === 'start');
     const kfId = existingKf?.id || generateId(`kf-${activeShot.id}-start`);
@@ -1036,7 +1056,7 @@ const StageDirector: React.FC<Props> = ({ project, updateProject, onApiKeyError,
       return updateKeyframeInShot(
         s,
         'start',
-        createKeyframe(kfId, 'start', prompt, activeShot.nineGrid!.imageUrl!, 'completed')
+        createKeyframe(kfId, 'start', prompt, nineGridImageUrl, 'completed')
       );
     });
     

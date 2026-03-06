@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Image as ImageIcon, Video, Trash2 } from 'lucide-react';
 import { Shot } from '../../types';
+import { getImageUrl } from '../../utils/imageUtils';
 
 interface ShotCardProps {
   shot: Shot;
@@ -14,6 +15,15 @@ const ShotCard: React.FC<ShotCardProps> = ({ shot, index, isActive, onClick, onD
   const sKf = shot.keyframes?.find(k => k.type === 'start');
   const hasImage = !!sKf?.imageUrl;
   const hasVideo = !!shot.interval?.videoUrl;
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (sKf?.imageUrl) {
+      getImageUrl(sKf.imageUrl).then(url => setImageUrl(url));
+    } else {
+      setImageUrl(null);
+    }
+  }, [sKf?.imageUrl]);
 
   // 从shot.id中提取显示编号
   // 例如：shot-1 → "SHOT 001", shot-1-1 → "SHOT 001-1", shot-1-2 → "SHOT 001-2"
@@ -65,9 +75,9 @@ const ShotCard: React.FC<ShotCardProps> = ({ shot, index, isActive, onClick, onD
 
       {/* Thumbnail */}
       <div className="aspect-video bg-[var(--bg-elevated)] relative overflow-hidden">
-        {hasImage ? (
+        {imageUrl ? (
           <img 
-            src={sKf!.imageUrl} 
+            src={imageUrl} 
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
             alt={`Shot ${index + 1}`}
           />

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Loader2, Edit2, Upload, ArrowRight, ArrowLeft, Sparkles, Wand2 } from 'lucide-react';
 import { Keyframe } from '../../types';
+import { getImageUrl } from '../../utils/imageUtils';
 
 interface KeyframeEditorProps {
   startKeyframe?: Keyframe;
@@ -39,6 +40,25 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
   onCopyNext,
   onImageClick
 }) => {
+  const [startImageUrl, setStartImageUrl] = useState<string | null>(null);
+  const [endImageUrl, setEndImageUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (startKeyframe?.imageUrl) {
+      getImageUrl(startKeyframe.imageUrl).then(url => setStartImageUrl(url));
+    } else {
+      setStartImageUrl(null);
+    }
+  }, [startKeyframe?.imageUrl]);
+
+  useEffect(() => {
+    if (endKeyframe?.imageUrl) {
+      getImageUrl(endKeyframe.imageUrl).then(url => setEndImageUrl(url));
+    } else {
+      setEndImageUrl(null);
+    }
+  }, [endKeyframe?.imageUrl]);
+
   const renderKeyframePanel = (
     type: 'start' | 'end',
     label: string,
@@ -46,6 +66,7 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
   ) => {
     const isGenerating = keyframe?.status === 'generating';
     const hasFailed = keyframe?.status === 'failed';
+    const imageUrl = type === 'start' ? startImageUrl : endImageUrl;
     
     return (
       <div className="space-y-2">
@@ -79,12 +100,12 @@ const KeyframeEditor: React.FC<KeyframeEditorProps> = ({
         </div>
         
         <div className="aspect-video bg-[var(--bg-base)] rounded-lg border border-[var(--border-primary)] overflow-hidden relative group">
-          {keyframe?.imageUrl ? (
+          {imageUrl ? (
             <>
               <img
-                src={keyframe.imageUrl}
+                src={imageUrl}
                 className="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
-                onClick={() => onImageClick(keyframe.imageUrl!, `${label} - 关键帧`)}
+                onClick={() => onImageClick(imageUrl!, `${label} - 关键帧`)}
                 alt={label}
               />
               <div className="absolute inset-0 bg-[var(--bg-base)]/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">

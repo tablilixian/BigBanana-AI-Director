@@ -14,6 +14,8 @@ import {
   getActiveModel,
   resolveModel,
   logScriptProgress,
+  getActiveChatModel,
+  getDefaultChatModelId,
 } from './apiCore';
 import {
   getStylePrompt,
@@ -38,9 +40,10 @@ export const generateArtDirection = async (
   scenes: { location: string; time: string; atmosphere: string }[],
   visualStyle: string,
   language: string = '中文',
-  model: string = 'gpt-5.1'
+  model?: string
 ): Promise<ArtDirection> => {
-  console.log('🎨 generateArtDirection 调用 - 生成全局美术指导文档');
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log('🎨 generateArtDirection 调用 - 生成全局美术指导文档，使用模型:', resolvedModel);
   logScriptProgress('正在生成全局美术指导文档（Art Direction）...');
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -94,7 +97,7 @@ Output ONLY valid JSON with this exact structure:
 }`;
 
   try {
-    const responseText = await retryOperation(() => chatCompletion(prompt, model, 0.4, 4096, 'json_object'));
+    const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.4, 4096, 'json_object'));
     const text = cleanJsonString(responseText);
     const parsed = JSON.parse(text);
 
@@ -237,9 +240,10 @@ export const generateCharacterTurnaroundPanels = async (
   artDirection: ArtDirection,
   visualStyle: string = 'anime',
   language: string = '中文',
-  model: string = 'gpt-5.1'
+  model?: string
 ): Promise<CharacterTurnaroundPanel[]> => {
-  console.log('🔄 generateCharacterTurnaroundPanels 调用 - 生成角色九宫格造型设计');
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log('🔄 generateCharacterTurnaroundPanels 调用 - 生成角色九宫格造型设计，使用模型:', resolvedModel);
   logScriptProgress('正在生成角色九宫格造型设计...');
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -311,7 +315,7 @@ Language: ${language}
 Write all descriptions in ${language}.`;
 
   try {
-    const responseText = await retryOperation(() => chatCompletion(prompt, model, 0.4, 4096, 'json_object'));
+    const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.4, 4096, 'json_object'));
     const text = cleanJsonString(responseText);
     const parsed = JSON.parse(text);
 
@@ -345,9 +349,10 @@ export const generateCharacterTurnaroundImage = async (
   visualStyle: string = 'anime',
   aspectRatio: AspectRatio = '1:1',
   language: string = '中文',
-  model: string = 'gpt-5.1'
+  model?: string
 ): Promise<string> => {
-  console.log('🎨 generateCharacterTurnaroundImage 调用 - 生成角色九宫格图片');
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log('🎨 generateCharacterTurnaroundImage 调用 - 生成角色九宫格图片，使用模型:', resolvedModel);
   logScriptProgress('正在生成角色九宫格图片...');
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -419,9 +424,10 @@ export const generateCharacterVisualPrompt = async (
   artDirection: ArtDirection,
   visualStyle: string = 'anime',
   language: string = '中文',
-  model: string = 'gpt-5.1'
+  model?: string
 ): Promise<string> => {
-  console.log('🎨 generateCharacterVisualPrompt 调用 - 生成角色视觉提示词');
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log('🎨 generateCharacterVisualPrompt 调用 - 生成角色视觉提示词，使用模型:', resolvedModel);
   logScriptProgress('正在生成角色视觉提示词...');
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -489,7 +495,7 @@ CRITICAL REQUIREMENTS:
 Output ONLY the visual prompt (no explanations, no JSON format). Length: 200-400 words.`;
 
   try {
-    const responseText = await retryOperation(() => chatCompletion(prompt, model, 0.4, 4096));
+    const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.4, 4096));
     const visualPrompt = responseText.trim();
 
     console.log('✅ 角色视觉提示词生成完成');
@@ -508,9 +514,10 @@ export const generateSceneVisualPrompt = async (
   scene: Scene,
   artDirection: ArtDirection,
   language: string = '中文',
-  model: string = 'gpt-5.1'
+  model?: string
 ): Promise<string> => {
-  console.log('🎨 generateSceneVisualPrompt 调用 - 生成场景视觉提示词');
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log('🎨 generateSceneVisualPrompt 调用 - 生成场景视觉提示词，使用模型:', resolvedModel);
   logScriptProgress('正在生成场景视觉提示词...');
 
   const stylePrompt = getStylePrompt('anime');
@@ -582,7 +589,7 @@ CRITICAL REQUIREMENTS:
 Output ONLY the visual prompt (no explanations, no JSON format). Length: 200-400 words.`;
 
   try {
-    const responseText = await retryOperation(() => chatCompletion(prompt, model, 0.4, 4096));
+    const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.4, 4096));
     const visualPrompt = responseText.trim();
 
     console.log('✅ 场景视觉提示词生成完成');
@@ -605,12 +612,13 @@ export const generateVisualPrompt = async (
   type: 'character' | 'scene',
   item: Character | Scene,
   genre: string,
-  model: string = 'gpt-5.1',
   visualStyle: string = 'anime',
   language: string = '中文',
-  artDirection: ArtDirection
+  artDirection: ArtDirection,
+  model?: string
 ): Promise<{ visualPrompt: string; negativePrompt: string }> => {
-  console.log(`🎨 generateVisualPrompt 调用 - 生成${type === 'character' ? '角色' : '场景'}视觉提示词`);
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log(`🎨 generateVisualPrompt 调用 - 生成${type === 'character' ? '角色' : '场景'}视觉提示词，使用模型:`, resolvedModel);
   logScriptProgress(`正在生成${type === 'character' ? '角色' : '场景'}视觉提示词...`);
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -712,16 +720,17 @@ export async function generateVisualPrompts(
   scenes: Scene[],
   artDirection: ArtDirection,
   language: string = '中文',
-  model: string = 'gpt-5.1'
+  model?: string
 ): Promise<{ characters: string[]; scenes: string[] }> {
-  console.log('🎨 generateVisualPrompts 调用 - 批量生成视觉提示词');
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log('🎨 generateVisualPrompts 调用 - 批量生成视觉提示词，使用模型:', resolvedModel);
 
   const characterPromises = characters.map(char => 
-    generateCharacterVisualPrompt(char, artDirection, language, model)
+    generateCharacterVisualPrompt(char, artDirection, language, resolvedModel)
   );
 
   const scenePromises = scenes.map(scene => 
-    generateSceneVisualPrompt(scene, artDirection, language, model)
+    generateSceneVisualPrompt(scene, artDirection, language, resolvedModel)
   );
 
   const [characterResults, sceneResults] = await Promise.all([
@@ -746,9 +755,10 @@ export const generateAllCharacterPrompts = async (
   genre: string,
   visualStyle: string,
   language: string = '中文',
-  model: string = 'gpt-5.1'
+  model?: string
 ): Promise<Array<{ visualPrompt: string; negativePrompt: string }>> => {
-  console.log('🎨 generateAllCharacterPrompts 调用 - 批量生成角色视觉提示词');
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log('🎨 generateAllCharacterPrompts 调用 - 批量生成角色视觉提示词，使用模型:', resolvedModel);
   logScriptProgress('正在批量生成角色视觉提示词...');
 
   const stylePrompt = getStylePrompt(visualStyle);
@@ -829,7 +839,7 @@ Output ONLY valid JSON with this exact structure:
 }`;
 
   try {
-    const responseText = await retryOperation(() => chatCompletion(prompt, model, 0.4, 8192, 'json_object'));
+    const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.4, 8192, 'json_object'));
     const text = cleanJsonString(responseText);
     const parsed = JSON.parse(text);
 

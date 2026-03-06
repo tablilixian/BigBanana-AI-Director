@@ -4,10 +4,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Info, CheckCircle } from 'lucide-react';
+import { Plus, Info, CheckCircle, ExternalLink, Building, Key, Loader2, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import { 
   ModelType, 
   ModelDefinition, 
+  ModelProvider,
 } from '../../types/model';
 import {
   getModels,
@@ -17,7 +18,13 @@ import {
   getActiveModelsConfig,
   setActiveModel,
   getProviderById,
+  getProviders,
+  updateProvider,
+  getApiKeyForModel,
+  getApiKeySource,
+  validateApiKey,
 } from '../../services/modelRegistry';
+import { verifyApiKey } from '../../services/modelService';
 import { useAlert } from '../GlobalAlert';
 import ModelCard from './ModelCard';
 import AddModelForm from './AddModelForm';
@@ -38,10 +45,18 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
   const [isAddingModel, setIsAddingModel] = useState(false);
   const [expandedModelId, setExpandedModelId] = useState<string | null>(null);
   const [activeModelId, setActiveModelId] = useState<string>('');
+  const [providers, setProviders] = useState<ModelProvider[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<string>('');
+  const [providerApiKey, setProviderApiKey] = useState<string>('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verifyStatus, setVerifyStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [verifyMessage, setVerifyMessage] = useState('');
+  const [expandedProviders, setExpandedProviders] = useState<Set<string>>(new Set());
   const { showAlert } = useAlert();
 
   useEffect(() => {
     loadModels();
+    loadProviders();
   }, [type]);
 
   const loadModels = () => {
@@ -50,6 +65,107 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
     // 获取当前激活的模型
     const activeConfig = getActiveModelsConfig();
     setActiveModelId(activeConfig[type]);
+  };
+
+  const loadProviders = () => {
+    const allProviders = getProviders();
+    setProviders(allProviders);
+    if (allProviders.length > 0 && !selectedProvider) {
+      setSelectedProvider(allProviders[0].id);
+      loadProviderApiKey(allProviders[0].id);
+    }
+  };
+
+  const loadProviderApiKey = (providerId: string) => {
+    const provider = getProviderById(providerId);
+    setProviderApiKey(provider?.apiKey || '');
+    setVerifyStatus('idle');
+    setVerifyMessage('');
+  };
+
+  const handleProviderChange = (providerId: string) => {
+    setSelectedProvider(providerId);
+    loadProviderApiKey(providerId);
+  };
+
+  const handleProviderApiKeyChange = (value: string) => {
+    setProviderApiKey(value);
+  };
+
+  const handleProviderApiKeySave = () => {
+    if (selectedProvider) {
+      const updates: Partial<ModelProvider> = { apiKey: providerApiKey.trim() || undefined };
+      if (updateProvider(selectedProvider, updates)) {
+        showAlert('厂商 API Key 已保存', { type: 'success' });
+        onRefresh();
+      } else {
+        showAlert('保存厂商 API Key 失败', { type: 'error' });
+      }
+    }
+  };
+
+  const handleVerifyApiKey = async () => {
+    if (!selectedProvider || !providerApiKey.trim()) {
+      showAlert('请输入 API Key 后再验证', { type: 'warning' });
+      return;
+    }
+
+    setIsVerifying(true);
+    setVerifyStatus('idle');
+    setVerifyMessage('');
+
+    try {
+      const provider = getProviderById(selectedProvider);
+      const baseUrl = provider?.baseUrl || '';
+      const result = await verifyApiKey(providerApiKey, baseUrl);
+      if (result.success) {
+        setVerifyStatus('success');
+        setVerifyMessage('API Key 验证成功！');
+        showAlert('API Key 验证成功', { type: 'success' });
+      } else {
+        setVerifyStatus('error');
+        setVerifyMessage(`验证失败: ${result.message}`);
+        showAlert(`API Key 验证失败: ${result.message}`, { type: 'error' });
+      }
+    } catch (error) {
+      setVerifyStatus('error');
+      setVerifyMessage(`验证失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      showAlert(`API Key 验证失败: ${error instanceof Error ? error.message : '未知错误'}`, { type: 'error' });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const toggleProviderExpanded = (providerId: string) => {
+    setExpandedProviders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(providerId)) {
+        newSet.delete(providerId);
+      } else {
+        newSet.add(providerId);
+      }
+      return newSet;
+    });
+  };
+
+  const isProviderExpanded = (providerId: string) => {
+    return expandedProviders.has(providerId);
+  };
+
+  const groupModelsByProvider = () => {
+    const grouped: Record<string, ModelDefinition[]> = {};
+    models.forEach(model => {
+      if (!grouped[model.providerId]) {
+        grouped[model.providerId] = [];
+      }
+      grouped[model.providerId].push(model);
+    });
+    return grouped;
+  };
+
+  const getProviderName = (providerId: string) => {
+    const provider = getProviderById(providerId);
+    return provider?.name || providerId;
   };
 
   const handleSetActiveModel = (modelId: string) => {
@@ -106,11 +222,6 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
 
   return (
     <div className="space-y-4">
-      {/* 类型说明 */}
-      <div className="mb-4">
-        <p className="text-xs text-[var(--text-tertiary)]">{typeDescriptions[type]}</p>
-      </div>
-
       {/* 当前激活模型信息 */}
       <div className="bg-[var(--accent-bg)] border border-[var(--accent-border)] rounded-lg p-3">
         <div className="flex items-center gap-2 mb-1">
@@ -133,29 +244,169 @@ const ModelList: React.FC<ModelListProps> = ({ type, onRefresh }) => {
         })()}
       </div>
 
-      {/* 提示信息 */}
-      <div className="bg-[var(--bg-hover)]/50 border border-[var(--border-secondary)] rounded-lg p-3 flex items-start gap-2">
-        <Info className="w-4 h-4 text-[var(--text-tertiary)] flex-shrink-0 mt-0.5" />
-        <p className="text-[10px] text-[var(--text-tertiary)] leading-relaxed">
-          点击「使用此模型」按钮可切换激活模型。自定义模型配置了独立提供商后，API 请求会发送到对应的地址。
-          点击展开按钮可调整模型参数。
+      {/* 厂商管理区域 */}
+      <div className="bg-[var(--bg-elevated)]/50 border border-[var(--border-primary)] rounded-lg p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Building className="w-4 h-4 text-[var(--accent-text)]" />
+          <h3 className="text-sm font-bold text-[var(--text-primary)]">厂商管理</h3>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+          <div className="md:col-span-1">
+            <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">
+              选择厂商
+            </label>
+            <select
+              value={selectedProvider}
+              onChange={(e) => handleProviderChange(e.target.value)}
+              className="w-full bg-[var(--bg-hover)] border border-[var(--border-secondary)] rounded px-3 py-2 text-xs text-[var(--text-primary)]"
+            >
+              {providers.map(provider => (
+                <option key={provider.id} value={provider.id}>
+                  {provider.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="md:col-span-2">
+            <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">
+              厂商 API Key（中等优先级）
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={providerApiKey}
+                onChange={(e) => handleProviderApiKeyChange(e.target.value)}
+                placeholder="输入厂商 API Key"
+                autoComplete="off"
+                className="flex-1 bg-[var(--bg-hover)] border border-[var(--border-secondary)] rounded px-3 py-2 text-xs text-[var(--text-primary)] font-mono"
+              />
+              <button
+                onClick={handleProviderApiKeySave}
+                className="px-3 py-2 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] text-xs font-bold rounded hover:bg-[var(--btn-primary-hover)] transition-colors whitespace-nowrap"
+              >
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleVerifyApiKey}
+            disabled={isVerifying || !providerApiKey.trim()}
+            className="flex items-center gap-1 px-3 py-1.5 bg-[var(--accent)] text-[var(--text-primary)] text-xs font-bold rounded hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isVerifying ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Key className="w-3 h-3" />
+            )}
+            验证 API Key
+          </button>
+          
+          {verifyStatus !== 'idle' && (
+            <div className="flex items-center gap-1 text-xs">
+              {verifyStatus === 'success' ? (
+                <CheckCircle className="w-3.5 h-3.5 text-[var(--success)]" />
+              ) : (
+                <AlertCircle className="w-3.5 h-3.5 text-[var(--error-text)]" />
+              )}
+              <span className={verifyStatus === 'success' ? 'text-[var(--success)]' : 'text-[var(--error-text)]'}>
+                {verifyMessage}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* API Key 配置说明 */}
+      <div className="bg-[var(--bg-hover)] border border-[var(--border-secondary)] rounded-lg p-3">
+        <div className="flex items-start gap-2 mb-2">
+          <ExternalLink className="w-4 h-4 text-[var(--accent-text)] flex-shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-xs font-bold text-[var(--text-primary)] mb-1">API Key 配置说明</h4>
+            <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed">
+              系统支持三级 API Key 配置，优先级从高到低：
+            </p>
+          </div>
+        </div>
+        <div className="space-y-1.5 ml-6">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full flex-shrink-0"></span>
+            <span className="text-[10px] text-[var(--text-secondary)]">
+              <span className="font-medium text-[var(--text-primary)]">模型专属 API Key</span>（最高优先级）- 为每个模型单独配置
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-[var(--text-tertiary)] rounded-full flex-shrink-0"></span>
+            <span className="text-[10px] text-[var(--text-secondary)]">
+              <span className="font-medium text-[var(--text-primary)]">厂商 API Key</span>（中等优先级）- 为同一厂商的所有模型配置
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-[var(--text-tertiary)] rounded-full flex-shrink-0"></span>
+            <span className="text-[10px] text-[var(--text-secondary)]">
+              <span className="font-medium text-[var(--text-primary)]">全局 API Key</span>（最低优先级）- 所有模型共享
+            </span>
+          </div>
+        </div>
+        <p className="text-[10px] text-[var(--text-muted)] mt-2 ml-6">
+          💡 建议：为高频使用的模型配置专属 API Key，其他使用厂商或全局配置
         </p>
       </div>
 
-      {/* 模型列表 */}
-      <div className="space-y-2">
-        {models.map((model) => (
-          <ModelCard
-            key={model.id}
-            model={model}
-            isExpanded={expandedModelId === model.id}
-            isActive={activeModelId === model.id}
-            onToggleExpand={() => handleToggleExpand(model.id)}
-            onUpdate={(updates) => handleUpdateModel(model.id, updates)}
-            onDelete={() => handleDeleteModel(model.id)}
-            onSetActive={() => handleSetActiveModel(model.id)}
-          />
-        ))}
+      {/* 按厂商分组的模型列表 */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 mb-2">
+          <Info className="w-4 h-4 text-[var(--text-tertiary)]" />
+          <h4 className="text-xs font-bold text-[var(--text-primary)]">模型列表（按厂商分组）</h4>
+        </div>
+        
+        {Object.entries(groupModelsByProvider()).map(([providerId, providerModels]) => {
+          const providerName = getProviderName(providerId);
+          const expanded = isProviderExpanded(providerId);
+          
+          return (
+            <div key={providerId} className="border border-[var(--border-primary)] rounded-lg overflow-hidden">
+              {/* 厂商分组头部 */}
+              <div 
+                className="bg-[var(--bg-elevated)]/30 p-3 flex items-center justify-between cursor-pointer hover:bg-[var(--bg-elevated)]/50 transition-colors"
+                onClick={() => toggleProviderExpanded(providerId)}
+              >
+                <div className="flex items-center gap-2">
+                  {expanded ? (
+                    <ChevronDown className="w-4 h-4 text-[var(--text-tertiary)]" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
+                  )}
+                  <Building className="w-4 h-4 text-[var(--accent-text)]" />
+                  <span className="text-sm font-medium text-[var(--text-primary)]">{providerName}</span>
+                  <span className="text-xs text-[var(--text-tertiary)]">({providerModels.length} 个模型)</span>
+                </div>
+              </div>
+              
+              {/* 厂商模型列表 */}
+              {expanded && (
+                <div className="divide-y divide-[var(--border-primary)]">
+                  {providerModels.map((model) => (
+                    <ModelCard
+                      key={model.id}
+                      model={model}
+                      isExpanded={expandedModelId === model.id}
+                      isActive={activeModelId === model.id}
+                      onToggleExpand={() => handleToggleExpand(model.id)}
+                      onUpdate={(updates) => handleUpdateModel(model.id, updates)}
+                      onDelete={() => handleDeleteModel(model.id)}
+                      onSetActive={() => handleSetActiveModel(model.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* 添加模型 */}

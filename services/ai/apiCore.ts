@@ -9,6 +9,8 @@ import {
   setGlobalApiKey as setRegistryApiKey,
   getApiBaseUrlForModel,
   getApiKeyForModel,
+  getApiKeySource,
+  validateApiKey,
   getModelById,
   getModels,
   getActiveModel,
@@ -102,12 +104,33 @@ export const resolveModel = (type: 'chat' | 'image' | 'video', modelId?: string)
   if (modelId) {
     const normalizedModelId = modelId.toLowerCase();
     const lookupId = normalizedModelId === 'veo_3_1-fast-4k' ? 'veo_3_1-fast' : modelId;
+    
+    // 首先尝试通过 id 精确匹配
     const model = getModelById(lookupId);
-    if (model && model.type === type) return model;
+    if (model && model.type === type) {
+      console.log(`[resolveModel] 通过 id 找到模型:`, model.id, model.name);
+      return model;
+    }
+    
+    // 然后尝试通过 apiModel 匹配
     const candidates = getModels(type).filter(m => m.apiModel === lookupId);
-    if (candidates.length === 1) return candidates[0];
+    if (candidates.length === 1) {
+      console.log(`[resolveModel] 通过 apiModel 找到模型:`, candidates[0].id, candidates[0].name);
+      return candidates[0];
+    }
+    
+    // 如果都找不到，记录警告并使用激活的模型
+    console.warn(`[resolveModel] 未找到模型: ${modelId}, 将使用激活的模型`);
   }
-  return getActiveModel(type);
+  
+  const activeModel = getActiveModel(type);
+  if (activeModel) {
+    console.log(`[resolveModel] 使用激活的模型:`, activeModel.id, activeModel.name);
+    return activeModel;
+  }
+  
+  console.warn(`[resolveModel] 没有激活的模型，返回 undefined`);
+  return undefined;
 };
 
 /**
@@ -131,8 +154,16 @@ export const checkApiKey = (type: 'chat' | 'image' | 'video' = 'chat', modelId?:
 
   if (resolvedModel) {
     const modelApiKey = getApiKeyForModel(resolvedModel.id);
-    console.log(`[checkApiKey] modelApiKey found:`, !!modelApiKey, modelApiKey ? '(has key)' : '(no key)');
+    const apiKeySource = getApiKeySource(resolvedModel.id);
+    console.log(`[checkApiKey] modelApiKey found:`, !!modelApiKey, `source: ${apiKeySource}`);
+    
     if (modelApiKey) return modelApiKey;
+    
+    // 如果没有找到 API Key，抛出更详细的错误
+    const validation = validateApiKey(type, resolvedModel.id);
+    if (!validation.isValid) {
+      throw new ApiKeyError(`${validation.message} (来源: ${validation.source})`);
+    }
   }
 
   const registryKey = getRegistryApiKey();
@@ -166,7 +197,24 @@ export const getApiBase = (type: 'chat' | 'image' | 'video' = 'chat', modelId?: 
 export const getActiveChatModelName = (): string => {
   try {
     const model = getActiveChatModel();
-    return model?.apiModel || model?.id || 'gpt-5.1';
+    return model?.apiModel || model?.id || getDefaultChatModelId();
+  } catch (e) {
+    return getDefaultChatModelId();
+  }
+};
+
+/**
+ * 获取默认的对话模型ID（用于后备）
+ */
+export const getDefaultChatModelId = (): string => {
+  try {
+    const model = getActiveChatModel();
+    if (model?.id) return model.id;
+    
+    // 如果没有激活模型，返回第一个可用的模型
+    const models = getModels('chat');
+    const enabledModel = models.find(m => m.isEnabled);
+    return enabledModel?.id || models[0]?.id || 'gpt-5.1';
   } catch (e) {
     return 'gpt-5.1';
   }
@@ -272,14 +320,15 @@ export const parseHttpError = async (response: Response): Promise<Error> => {
  */
 export const chatCompletion = async (
   prompt: string,
-  model: string = 'gpt-5.1',
+  model?: string,
   temperature: number = 0.7,
   maxTokens: number = 8192,
   responseFormat?: 'json_object',
   timeout: number = 600000
 ): Promise<string> => {
-  const apiKey = checkApiKey('chat', model);
-  const requestModel = resolveRequestModel('chat', model);
+  const resolvedModel = model || getDefaultChatModelId();
+  const apiKey = checkApiKey('chat', resolvedModel);
+  const requestModel = resolveRequestModel('chat', resolvedModel);
 
   const requestBody: any = {
     model: requestModel,
@@ -295,8 +344,8 @@ export const chatCompletion = async (
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const apiBase = getApiBase('chat', model);
-    const resolved = resolveModel('chat', model);
+    const apiBase = getApiBase('chat', resolvedModel);
+    const resolved = resolveModel('chat', resolvedModel);
     const endpoint = resolved?.endpoint || '/v1/chat/completions';
     const response = await fetch(`${apiBase}${endpoint}`, {
       method: 'POST',
@@ -328,14 +377,15 @@ export const chatCompletion = async (
  */
 export const chatCompletionStream = async (
   prompt: string,
-  model: string = 'gpt-5.1',
+  model?: string,
   temperature: number = 0.7,
-  responseFormat: 'json_object' | undefined,
+  responseFormat: 'json_object' | undefined = undefined,
   timeout: number = 600000,
   onDelta?: (delta: string) => void
 ): Promise<string> => {
-  const apiKey = checkApiKey('chat', model);
-  const requestModel = resolveRequestModel('chat', model);
+  const resolvedModel = model || getDefaultChatModelId();
+  const apiKey = checkApiKey('chat', resolvedModel);
+  const requestModel = resolveRequestModel('chat', resolvedModel);
   const requestBody: any = {
     model: requestModel,
     messages: [{ role: 'user', content: prompt }],

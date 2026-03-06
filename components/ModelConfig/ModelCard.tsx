@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Trash2, ToggleLeft, ToggleRight, CheckCircle, Circle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, ToggleLeft, ToggleRight, CheckCircle, Circle, Info } from 'lucide-react';
 import { 
   ModelDefinition, 
   ChatModelParams,
@@ -13,6 +13,10 @@ import {
   AspectRatio,
   VideoDuration
 } from '../../types/model';
+import {
+  getProviderById,
+  getApiKeySource,
+} from '../../services/modelRegistry';
 
 interface ModelCardProps {
   model: ModelDefinition;
@@ -244,21 +248,55 @@ const ModelCard: React.FC<ModelCardProps> = ({
       {isExpanded && (
         <div className="px-4 pb-4 pt-0 border-t border-[var(--border-primary)]">
           <div className="pt-4 space-y-4">
-            {/* 模型专属 API Key */}
-            <div>
-              <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">
-                API Key（留空使用全局 Key）
-              </label>
-              <input
-                type="password"
-                value={editApiKey}
-                onChange={(e) => handleApiKeyChange(e.target.value)}
-                placeholder="留空则使用全局 API Key"
-                className="w-full bg-[var(--bg-hover)] border border-[var(--border-secondary)] rounded px-3 py-2 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] font-mono"
-              />
-              {model.apiKey && (
-                <p className="text-[9px] text-[var(--success)] mt-1">✓ 已配置专属 Key</p>
-              )}
+            {/* API Key 配置区域 */}
+            <div className="bg-[var(--bg-hover)] rounded-lg p-4 border border-[var(--border-secondary)]">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-[var(--text-primary)]">
+                    API Key 配置
+                  </label>
+                  <div className="group relative">
+                    <Info className="w-4 h-4 text-[var(--text-tertiary)] cursor-help" />
+                    <div className="absolute left-0 top-6 w-64 p-3 bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none group-hover:pointer-events-auto">
+                      <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed">
+                        优先级：模型专属 &gt; 提供商 &gt; 全局
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <span className="text-[10px] text-[var(--text-tertiary)]">
+                  {getApiKeySource(model.id)}
+                </span>
+              </div>
+              
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[10px] text-[var(--text-tertiary)] block mb-1">
+                    模型专属 API Key（最高优先级）
+                  </label>
+                  <input
+                    type="password"
+                    value={editApiKey}
+                    onChange={(e) => handleApiKeyChange(e.target.value)}
+                    placeholder="留空则使用提供商或全局配置"
+                    className="w-full bg-[var(--bg-base)] border border-[var(--border-secondary)] rounded px-3 py-2 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] font-mono"
+                  />
+                </div>
+                
+                <div className="flex items-center gap-2 text-[10px] text-[var(--text-muted)]">
+                  {model.apiKey ? (
+                    <>
+                      <CheckCircle className="w-3.5 h-3.5 text-[var(--success)]" />
+                      <span>已配置专属 API Key</span>
+                    </>
+                  ) : (
+                    <>
+                      <Circle className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+                      <span>使用提供商或全局 API Key</span>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
             
             {model.type === 'chat' && renderChatParams(model.params)}

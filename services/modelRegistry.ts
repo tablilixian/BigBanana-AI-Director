@@ -530,6 +530,46 @@ export const isModelAvailable = (modelId: string): boolean => {
   return !!apiKey;
 };
 
+/**
+ * 获取 API Key 的来源（用于显示）
+ */
+export const getApiKeySource = (modelId: string): string => {
+  const model = getModelById(modelId);
+  if (!model) return '全局 API Key';
+  
+  if (model.apiKey) return '模型专属 API Key';
+  
+  const provider = getProviderById(model.providerId);
+  if (provider?.apiKey) return `提供商 API Key (${provider.name})`;
+  
+  return '全局 API Key';
+};
+
+/**
+ * 验证 API Key 是否可用
+ */
+export const validateApiKey = (type: ModelType, modelId?: string): {
+  isValid: boolean;
+  source: string;
+  message?: string;
+} => {
+  const apiKey = getApiKeyForModel(modelId);
+  const source = getApiKeySource(modelId);
+  
+  if (!apiKey) {
+    return {
+      isValid: false,
+      source,
+      message: `API Key 缺失，请在${source}中配置`
+    };
+  }
+  
+  return {
+    isValid: true,
+    source
+  };
+};
+
 // ============================================
 // 默认值辅助函数（向后兼容）
 // ============================================

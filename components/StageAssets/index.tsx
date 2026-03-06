@@ -19,7 +19,7 @@ import {
   generateId,
   compareIds 
 } from './utils';
-import { getActiveChatModel } from '../../services/aiService';
+import { getActiveChatModel, getDefaultChatModelId } from '../../services/aiService';
 import { DEFAULTS, STYLES, GRID_LAYOUTS } from './constants';
 import ImagePreviewModal from './ImagePreviewModal';
 import CharacterCard from './CharacterCard';
@@ -1128,7 +1128,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         project.scriptData?.artDirection,
         visualStyle,
         language,
-        activeModel?.id || 'gpt-5.1'
+        activeModel?.id || getDefaultChatModelId()
       );
 
       // 更新状态为 panels_ready
@@ -1189,7 +1189,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
         visualStyle,
         '1:1',
         language,
-        activeModel?.id || 'gpt-5.1'
+        activeModel?.id || getDefaultChatModelId()
       );
 
       // 更新状态为 completed

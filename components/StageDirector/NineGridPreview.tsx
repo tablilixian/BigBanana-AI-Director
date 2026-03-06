@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Loader2, RefreshCw, Check, Grid3x3, AlertCircle, Image as ImageIcon, Crop, Edit2, Save, ArrowRight, Wand2, ImagePlus } from 'lucide-react';
 import { NineGridData, NineGridPanel, AspectRatio } from '../../types';
 import { NINE_GRID } from './constants';
+import { getImageUrl } from '../../utils/imageUtils';
 
 interface NineGridPreviewProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
   const [editForm, setEditForm] = useState<{ shotSize: string; cameraAngle: string; description: string }>({
     shotSize: '', cameraAngle: '', description: ''
   });
+  const [nineGridImageUrl, setNineGridImageUrl] = useState<string | null>(null);
 
   // 当编辑面板时，初始化编辑表单
   useEffect(() => {
@@ -48,13 +50,24 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
     }
   }, [editingPanel, nineGrid?.panels]);
 
+  // 处理九宫格图片 URL
+  useEffect(() => {
+    if (nineGrid?.imageUrl) {
+      getImageUrl(nineGrid.imageUrl).then(url => {
+        setNineGridImageUrl(url);
+      });
+    } else {
+      setNineGridImageUrl(null);
+    }
+  }, [nineGrid?.imageUrl]);
+
   if (!isOpen) return null;
 
   const isGeneratingPanels = nineGrid?.status === 'generating_panels';
   const isPanelsReady = nineGrid?.status === 'panels_ready';
   const isGeneratingImage = nineGrid?.status === 'generating_image';
   const hasFailed = nineGrid?.status === 'failed';
-  const isCompleted = nineGrid?.status === 'completed' && nineGrid?.imageUrl;
+  const isCompleted = nineGrid?.status === 'completed' && nineGridImageUrl;
   // 兼容旧的 generating 状态
   const isGenerating = nineGrid?.status === 'generating_panels' || nineGrid?.status === 'generating_image' || (nineGrid?.status as string) === 'generating';
 
@@ -377,7 +390,7 @@ const NineGridPreview: React.FC<NineGridPreviewProps> = ({
                   <div className="relative bg-[var(--bg-base)] rounded-lg border border-[var(--border-primary)] overflow-hidden">
                     {/* Base Image - 自适应实际图片比例 */}
                     <img
-                      src={nineGrid.imageUrl}
+                      src={nineGridImageUrl}
                       className="w-full h-auto block"
                       alt="九宫格分镜预览"
                     />

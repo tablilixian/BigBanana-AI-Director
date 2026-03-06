@@ -10,6 +10,8 @@ import {
   cleanJsonString,
   chatCompletion,
   getActiveChatModel,
+  resolveModel,
+  getDefaultChatModelId,
 } from './apiCore';
 import { getStylePromptCN, getStylePrompt } from './promptConstants';
 import { generateImage } from './visualService';
@@ -27,9 +29,10 @@ export const optimizeBothKeyframes = async (
   sceneInfo: { location: string; time: string; atmosphere: string },
   characterInfo: string[],
   visualStyle: string,
-  model: string = 'gpt-5.1'
+  model?: string
 ): Promise<{ startPrompt: string; endPrompt: string }> => {
-  console.log('🎨 optimizeBothKeyframes 调用 - 同时优化起始帧和结束帧 - 使用模型:', model);
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log('🎨 optimizeBothKeyframes 调用 - 同时优化起始帧和结束帧 - 使用模型:', resolvedModel);
   const startTime = Date.now();
 
   const styleDesc = getStylePromptCN(visualStyle);
@@ -145,7 +148,7 @@ ${styleDesc}
 `;
 
   try {
-    const result = await retryOperation(() => chatCompletion(prompt, model, 0.7, 2048, 'json_object'));
+    const result = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.7, 2048, 'json_object'));
     const duration = Date.now() - startTime;
 
     const cleaned = cleanJsonString(result);
@@ -177,9 +180,10 @@ export const optimizeKeyframePrompt = async (
   sceneInfo: { location: string; time: string; atmosphere: string },
   characterInfo: string[],
   visualStyle: string,
-  model: string = 'gpt-5.1'
+  model?: string
 ): Promise<string> => {
-  console.log(`🎨 optimizeKeyframePrompt 调用 - ${frameType === 'start' ? '起始帧' : '结束帧'} - 使用模型:`, model);
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log(`🎨 optimizeKeyframePrompt 调用 - ${frameType === 'start' ? '起始帧' : '结束帧'} - 使用模型:`, resolvedModel);
   const startTime = Date.now();
 
   const frameLabel = frameType === 'start' ? '起始帧' : '结束帧';
@@ -286,7 +290,7 @@ ${frameType === 'start' ? `
 `;
 
   try {
-    const result = await retryOperation(() => chatCompletion(prompt, model, 0.7, 1024));
+    const result = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.7, 1024));
     const duration = Date.now() - startTime;
 
     console.log(`✅ AI ${frameLabel}优化成功，耗时:`, duration, 'ms');
@@ -309,9 +313,10 @@ export const generateActionSuggestion = async (
   startFramePrompt: string,
   endFramePrompt: string,
   cameraMovement: string,
-  model: string = 'gpt-5.1'
+  model?: string
 ): Promise<string> => {
-  console.log('🎬 generateActionSuggestion 调用 - 使用模型:', model);
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log('🎬 generateActionSuggestion 调用 - 使用模型:', resolvedModel);
   const startTime = Date.now();
 
   const actionReferenceExamples = `
@@ -402,9 +407,10 @@ export const splitShotIntoSubShots = async (
   sceneInfo: { location: string; time: string; atmosphere: string },
   characterNames: string[],
   visualStyle: string,
-  model: string = 'gpt-5.1'
+  model?: string
 ): Promise<{ subShots: any[] }> => {
-  console.log('✂️ splitShotIntoSubShots 调用 - 使用模型:', model);
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log('✂️ splitShotIntoSubShots 调用 - 使用模型:', resolvedModel);
   const startTime = Date.now();
 
   const styleDesc = getStylePromptCN(visualStyle);
@@ -584,9 +590,10 @@ export const enhanceKeyframePrompt = async (
   visualStyle: string,
   cameraMovement: string,
   frameType: 'start' | 'end',
-  model: string = 'gpt-5.1'
+  model?: string
 ): Promise<string> => {
-  console.log(`🎨 enhanceKeyframePrompt 调用 - ${frameType === 'start' ? '起始帧' : '结束帧'} - 使用模型:`, model);
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log(`🎨 enhanceKeyframePrompt 调用 - ${frameType === 'start' ? '起始帧' : '结束帧'} - 使用模型:`, resolvedModel);
   const startTime = Date.now();
 
   const styleDesc = getStylePromptCN(visualStyle);
@@ -666,7 +673,7 @@ ${frameType === 'start' ? '建立清晰的初始状态、起始姿态、为后�
 `;
 
   try {
-    const result = await retryOperation(() => chatCompletion(prompt, model, 0.7, 3072));
+    const result = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.7, 3072));
     const duration = Date.now() - startTime;
 
     console.log(`✅ AI ${frameLabel}增强成功，耗时:`, duration, 'ms');
@@ -699,7 +706,10 @@ export const generateNineGridPanels = async (
   const startTime = Date.now();
   console.log('🎬 九宫格分镜 - 开始AI拆分视角...');
 
-  const resolvedModel = model || getActiveChatModel()?.id || 'gpt-5.1';
+  // 直接使用激活的模型，忽略传入的 model 参数
+  const resolvedModel = getDefaultChatModelId();
+  const resolvedModelObj = resolveModel('chat', resolvedModel);
+  console.log('🎬 九宫格分镜 - 使用模型:', resolvedModel, resolvedModelObj?.name);
 
   const systemPrompt = `你是一位专业的电影分镜师和摄影指导。你的任务是将一个镜头动作拆解为9个不同的摄影视角，用于九宫格分镜预览。
 每个视角必须展示相同场景的不同景别和机位角度组合，确保覆盖从远景到特写、从俯拍到仰拍的多样化视角。`;

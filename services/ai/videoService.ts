@@ -187,6 +187,7 @@ const generateVideoAsync = async (
     const isBigModel = resolvedModel?.providerId === 'bigmodel';
 
     console.log(`🔄 ${resolvedModelName} 任务状态:`, status, '进度:', statusData.progress);
+    console.log(`📋 ${resolvedModelName} 完整响应数据:`, JSON.stringify(statusData, null, 2));
 
     if (status === 'completed' || status === 'succeeded' || status === 'SUCCESS') {
       // BigModel 返回 video_result 数组
@@ -215,11 +216,19 @@ const generateVideoAsync = async (
       console.log('✅ 任务完成，视频:', videoUrlFromStatus || videoId);
       break;
     } else if (status === 'failed' || status === 'error' || status === 'FAIL') {
+      console.error(`❌ ${resolvedModelName} 任务失败，完整错误数据:`, JSON.stringify(statusData, null, 2));
       const errorMessage =
         statusData?.error?.message ||
         statusData?.error?.code ||
         statusData?.message ||
+        statusData?.error ||
         '未知错误';
+      console.error(`❌ ${resolvedModelName} 错误详情:`, {
+        error: statusData?.error,
+        message: statusData?.message,
+        code: statusData?.error?.code,
+        fullData: statusData
+      });
       throw new Error(`视频生成失败: ${errorMessage}`);
     }
 

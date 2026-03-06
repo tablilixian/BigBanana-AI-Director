@@ -23,6 +23,7 @@ export {
   getVeoModelName,
   getSoraVideoSize,
   getActiveChatModelName,
+  getDefaultChatModelId,
   getActiveModel,
   getActiveChatModel,
   getActiveVideoModel,

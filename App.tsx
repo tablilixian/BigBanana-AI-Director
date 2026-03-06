@@ -42,6 +42,19 @@ function App() {
   const hideStatusTimeoutRef = useRef<any>(null);
   const initialProjectRef = useRef<ProjectState | null>(null);
   const isFirstLoadRef = useRef(true);
+  const lastSavedHashRef = useRef<string>('');
+
+  const computeProjectHash = (project: ProjectState | null): string => {
+    if (!project) return '';
+    const projectString = JSON.stringify(project);
+    let hash = 0;
+    for (let i = 0; i < projectString.length; i++) {
+      const char = projectString.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return hash.toString(36);
+  };
 
   // Initialize auth on mount
   useEffect(() => {
@@ -115,6 +128,19 @@ function App() {
     setShowModelConfig(true);
   };
 
+  // Handle API Key error
+  const handleApiKeyError = (error: any) => {
+    if (error?.name === 'ApiKeyError' || 
+        error?.message?.includes('API Key missing') ||
+        error?.message?.includes('AntSK API Key') ||
+        error?.message?.includes('API Key 缺失')) {
+      console.warn('检测到 API Key 错误，请配置 API Key...');
+      setShowModelConfig(true);
+      return true;
+    }
+    return false;
+  };
+
   // Global error handler
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
@@ -175,9 +201,20 @@ function App() {
     if (isFirstLoadRef.current) {
       console.log('[App] 📥 首次加载项目，跳过 auto-save');
       isFirstLoadRef.current = false;
+      lastSavedHashRef.current = computeProjectHash(project);
       return;
     }
 
+    // 计算当前 project 的 hash
+    const currentHash = computeProjectHash(project);
+    
+    // 如果内容没有变化，跳过保存
+    if (currentHash === lastSavedHashRef.current) {
+      console.log('[App] 🔄 项目内容未变化，跳过保存');
+      return;
+    }
+
+    console.log('[App] 📝 项目内容已变化，准备保存...');
     setSaveStatus('unsaved');
     setShowSaveStatus(true);
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -187,8 +224,9 @@ function App() {
       try {
         await hybridStorage.saveProject(project);
         setSaveStatus('saved');
-        // 更新初始快照，避免重复保存
-        initialProjectRef.current = JSON.parse(JSON.stringify(project));
+        // 更新 hash，避免重复保存
+        lastSavedHashRef.current = currentHash;
+        console.log('[App] ✅ 项目保存成功，hash:', currentHash);
       } catch (e) {
         console.error("Auto-save failed", e);
       }
@@ -354,9 +392,9 @@ function App() {
           />
         );
       case 'assets':
-        return <StageAssets project={project} updateProject={updateProject} onGeneratingChange={setIsGenerating} />;
+        return <StageAssets project={project} updateProject={updateProject} onApiKeyError={handleApiKeyError} onGeneratingChange={setIsGenerating} />;
       case 'director':
-        return <StageDirector project={project} updateProject={updateProject} onGeneratingChange={setIsGenerating} />;
+        return <StageDirector project={project} updateProject={updateProject} onApiKeyError={handleApiKeyError} onGeneratingChange={setIsGenerating} />;
       case 'export':
         return <StageExport project={project} />;
       case 'prompts':

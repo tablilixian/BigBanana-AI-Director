@@ -4,6 +4,7 @@ import { Shot, Character, Scene, Prop, ProjectState, AspectRatio, VideoDuration,
 import SceneContext from './SceneContext';
 import KeyframeEditor from './KeyframeEditor';
 import VideoGenerator from './VideoGenerator';
+import { getImageUrl } from '../../utils/imageUtils';
 
 interface ShotWorkbenchProps {
   shot: Shot;
@@ -94,10 +95,21 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
   const startKf = shot.keyframes?.find(k => k.type === 'start');
   const endKf = shot.keyframes?.find(k => k.type === 'end');
   const [localVideoModelId, setLocalVideoModelId] = useState(currentVideoModelId);
+  const [nineGridImageUrl, setNineGridImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalVideoModelId(currentVideoModelId);
   }, [currentVideoModelId]);
+
+  useEffect(() => {
+    if (nineGrid?.imageUrl) {
+      getImageUrl(nineGrid.imageUrl).then(url => {
+        setNineGridImageUrl(url);
+      });
+    } else {
+      setNineGridImageUrl(null);
+    }
+  }, [nineGrid?.imageUrl]);
 
   const normalizedModelId = localVideoModelId.trim().toLowerCase();
   // 所有视频模型都支持首尾帧模式
@@ -235,13 +247,13 @@ const ShotWorkbench: React.FC<ShotWorkbenchProps> = ({
           </div>
           
           {/* Nine Grid thumbnail preview (if generated) */}
-          {nineGrid?.status === 'completed' && nineGrid.imageUrl && (
+          {nineGrid?.status === 'completed' && nineGridImageUrl && (
             <div 
               className="relative bg-[var(--bg-base)] rounded-lg border border-[var(--border-primary)] overflow-hidden cursor-pointer group"
               onClick={onShowNineGrid}
             >
               <img
-                src={nineGrid.imageUrl}
+                src={nineGridImageUrl}
                 className="w-full h-auto block transition-transform duration-300 group-hover:scale-105"
                 alt="九宫格分镜预览"
               />

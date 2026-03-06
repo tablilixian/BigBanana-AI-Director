@@ -11,6 +11,8 @@ import {
   chatCompletion,
   chatCompletionStream,
   logScriptProgress,
+  getActiveChatModel,
+  getDefaultChatModelId,
 } from './apiCore';
 import { getStylePrompt } from './promptConstants';
 import { generateArtDirection, generateAllCharacterPrompts, generateVisualPrompt } from './visualService';
@@ -29,10 +31,11 @@ export { setScriptLogCallback, clearScriptLogCallback, logScriptProgress } from 
 export const parseScriptToData = async (
   rawText: string,
   language: string = '中文',
-  model: string = 'gpt-5.1',
+  model?: string,
   visualStyle: string = 'live-action'
 ): Promise<ScriptData> => {
-  console.log('📝 parseScriptToData 调用 - 使用模型:', model, '视觉风格:', visualStyle);
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log('📝 parseScriptToData 调用 - 使用模型:', resolvedModel, '视觉风格:', visualStyle);
   logScriptProgress('正在解析剧本结构...');
   const startTime = Date.now();
 
@@ -60,7 +63,7 @@ export const parseScriptToData = async (
   `;
 
   try {
-    const responseText = await retryOperation(() => chatCompletion(prompt, model, 0.7, 8192, 'json_object'));
+    const responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.7, 8192, 'json_object'));
 
     let parsed: any = {};
     try {
@@ -129,7 +132,7 @@ export const parseScriptToData = async (
               await new Promise(resolve => setTimeout(resolve, 1500));
               console.log(`  重新生成角色提示词: ${char.name}`);
               logScriptProgress(`重新生成角色视觉提示词：${char.name}`);
-              const prompts = await generateVisualPrompt('character', char, genre, model, visualStyle, language, artDirection);
+              const prompts = await generateVisualPrompt('character', char, genre, visualStyle, language, artDirection, resolvedModel);
               char.visualPrompt = prompts.visualPrompt;
               char.negativePrompt = prompts.negativePrompt;
             } catch (e) {
@@ -144,7 +147,7 @@ export const parseScriptToData = async (
             if (i > 0) await new Promise(resolve => setTimeout(resolve, 1500));
             console.log(`  生成角色提示词: ${characters[i].name}`);
             logScriptProgress(`生成角色视觉提示词：${characters[i].name}`);
-            const prompts = await generateVisualPrompt('character', characters[i], genre, model, visualStyle, language, artDirection);
+            const prompts = await generateVisualPrompt('character', characters[i], genre, visualStyle, language, artDirection, resolvedModel);
             characters[i].visualPrompt = prompts.visualPrompt;
             characters[i].negativePrompt = prompts.negativePrompt;
           } catch (e2) {
@@ -158,7 +161,7 @@ export const parseScriptToData = async (
           if (i > 0) await new Promise(resolve => setTimeout(resolve, 1500));
           console.log(`  生成角色提示词: ${characters[i].name}`);
           logScriptProgress(`生成角色视觉提示词：${characters[i].name}`);
-          const prompts = await generateVisualPrompt('character', characters[i], genre, model, visualStyle, language, artDirection);
+          const prompts = await generateVisualPrompt('character', characters[i], genre, visualStyle, language, artDirection, resolvedModel);
           characters[i].visualPrompt = prompts.visualPrompt;
           characters[i].negativePrompt = prompts.negativePrompt;
         } catch (e) {
@@ -173,7 +176,7 @@ export const parseScriptToData = async (
         if (i > 0 || characters.length > 0) await new Promise(resolve => setTimeout(resolve, 1500));
         console.log(`  生成场景提示词: ${scenes[i].location}`);
         logScriptProgress(`生成场景视觉提示词：${scenes[i].location}`);
-        const prompts = await generateVisualPrompt('scene', scenes[i], genre, model, visualStyle, language, artDirection);
+        const prompts = await generateVisualPrompt('scene', scenes[i], genre, visualStyle, language, artDirection, resolvedModel);
         scenes[i].visualPrompt = prompts.visualPrompt;
         scenes[i].negativePrompt = prompts.negativePrompt;
       } catch (e) {
@@ -230,8 +233,9 @@ export const parseScriptToData = async (
  * 生成分镜列表
  * 根据剧本数据和目标时长，为每个场景生成适量的分镜头
  */
-export const generateShotList = async (scriptData: ScriptData, model: string = 'gpt-5.1'): Promise<Shot[]> => {
-  console.log('🎬 generateShotList 调用 - 使用模型:', model, '视觉风格:', scriptData.visualStyle);
+export const generateShotList = async (scriptData: ScriptData, model?: string): Promise<Shot[]> => {
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log('🎬 generateShotList 调用 - 使用模型:', resolvedModel, '视觉风格:', scriptData.visualStyle);
   logScriptProgress('正在生成分镜列表...');
   const overallStartTime = Date.now();
 
@@ -358,8 +362,8 @@ ${artDirectionBlock}
 
     let responseText = '';
     try {
-      console.log(`  📡 场景 ${index + 1} API调用 - 模型:`, model);
-      responseText = await retryOperation(() => chatCompletion(prompt, model, 0.5, 8192, 'json_object'));
+      console.log(`  📡 场景 ${index + 1} API调用 - 模型:`, resolvedModel);
+      responseText = await retryOperation(() => chatCompletion(prompt, resolvedModel, 0.5, 8192, 'json_object'));
       const text = cleanJsonString(responseText);
       const parsed = JSON.parse(text);
 
@@ -443,8 +447,9 @@ ${artDirectionBlock}
 /**
  * AI续写功能 - 基于已有剧本内容续写后续情节
  */
-export const continueScript = async (existingScript: string, language: string = '中文', model: string = 'gpt-5.1'): Promise<string> => {
-  console.log('✍️ continueScript 调用 - 使用模型:', model);
+export const continueScript = async (existingScript: string, language: string = '中文', model?: string): Promise<string> => {
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log('✍️ continueScript 调用 - 使用模型:', resolvedModel);
   const startTime = Date.now();
 
   const prompt = `
@@ -474,7 +479,7 @@ ${existingScript}
       resourceId: 'continue-script',
       resourceName: 'AI续写剧本',
       status: 'success',
-      model,
+      model: resolvedModel,
       duration,
       prompt: existingScript.substring(0, 200) + '...'
     });
@@ -492,10 +497,11 @@ ${existingScript}
 export const continueScriptStream = async (
   existingScript: string,
   language: string = '中文',
-  model: string = 'gpt-5.1',
+  model?: string,
   onDelta?: (delta: string) => void
 ): Promise<string> => {
-  console.log('✍️ continueScriptStream 调用 - 使用模型:', model);
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log('✍️ continueScriptStream 调用 - 使用模型:', resolvedModel);
   const startTime = Date.now();
 
   const prompt = `
@@ -517,7 +523,7 @@ ${existingScript}
 `;
 
   try {
-    const result = await retryOperation(() => chatCompletionStream(prompt, model, 0.8, undefined, 600000, onDelta));
+    const result = await retryOperation(() => chatCompletionStream(prompt, resolvedModel, 0.8, undefined, 600000, onDelta));
     const duration = Date.now() - startTime;
 
     await addRenderLogWithTokens({
@@ -525,7 +531,7 @@ ${existingScript}
       resourceId: 'continue-script',
       resourceName: 'AI续写剧本（流式）',
       status: 'success',
-      model,
+      model: resolvedModel,
       duration,
       prompt: existingScript.substring(0, 200) + '...'
     });
@@ -540,8 +546,9 @@ ${existingScript}
 /**
  * AI改写功能 - 对整个剧本进行改写
  */
-export const rewriteScript = async (originalScript: string, language: string = '中文', model: string = 'gpt-5.1'): Promise<string> => {
-  console.log('🔄 rewriteScript 调用 - 使用模型:', model);
+export const rewriteScript = async (originalScript: string, language: string = '中文', model?: string): Promise<string> => {
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log('🔄 rewriteScript 调用 - 使用模型:', resolvedModel);
   const startTime = Date.now();
 
   const prompt = `
@@ -575,7 +582,7 @@ ${originalScript}
       resourceId: 'rewrite-script',
       resourceName: 'AI改写剧本',
       status: 'success',
-      model,
+      model: resolvedModel,
       duration,
       prompt: originalScript.substring(0, 200) + '...'
     });
@@ -593,10 +600,11 @@ ${originalScript}
 export const rewriteScriptStream = async (
   originalScript: string,
   language: string = '中文',
-  model: string = 'gpt-5.1',
+  model?: string,
   onDelta?: (delta: string) => void
 ): Promise<string> => {
-  console.log('🔄 rewriteScriptStream 调用 - 使用模型:', model);
+  const resolvedModel = model || getDefaultChatModelId();
+  console.log('🔄 rewriteScriptStream 调用 - 使用模型:', resolvedModel);
   const startTime = Date.now();
 
   const prompt = `
@@ -622,7 +630,7 @@ ${originalScript}
 `;
 
   try {
-    const result = await retryOperation(() => chatCompletionStream(prompt, model, 0.7, undefined, 600000, onDelta));
+    const result = await retryOperation(() => chatCompletionStream(prompt, resolvedModel, 0.7, undefined, 600000, onDelta));
     const duration = Date.now() - startTime;
 
     await addRenderLogWithTokens({
@@ -630,7 +638,7 @@ ${originalScript}
       resourceId: 'rewrite-script',
       resourceName: 'AI改写剧本（流式）',
       status: 'success',
-      model,
+      model: resolvedModel,
       duration,
       prompt: originalScript.substring(0, 200) + '...'
     });
