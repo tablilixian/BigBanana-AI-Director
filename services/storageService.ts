@@ -39,6 +39,10 @@ const openDB = (): Promise<IDBDatabase> => {
         const store = db.createObjectStore('images', { keyPath: 'id' });
         store.createIndex('createdAt', 'createdAt', { unique: false });
       }
+      // Stage 专用存储（避免频繁云端同步）
+      if (!db.objectStoreNames.contains('projectStages')) {
+        db.createObjectStore('projectStages', { keyPath: 'projectId' });
+      }
     };
   });
 };
@@ -460,14 +464,6 @@ const STAGE_STORE_NAME = 'projectStages';
 export const saveCurrentStage = async (projectId: string, stage: string): Promise<void> => {
   try {
     const db = await openDB();
-    
-    // 确保 projectStages store 存在
-    if (!db.objectStoreNames.contains(STAGE_STORE_NAME)) {
-      db.close();
-      await upgradeDBForStageStore();
-      return saveCurrentStage(projectId, stage);
-    }
-    
     const tx = db.transaction(STAGE_STORE_NAME, 'readwrite');
     const store = tx.objectStore(STAGE_STORE_NAME);
     await store.put({ projectId, stage, updatedAt: Date.now() });
@@ -484,12 +480,6 @@ export const saveCurrentStage = async (projectId: string, stage: string): Promis
 export const getCurrentStage = async (projectId: string): Promise<string> => {
   try {
     const db = await openDB();
-    
-    // 确保 projectStages store 存在
-    if (!db.objectStoreNames.contains(STAGE_STORE_NAME)) {
-      return 'script';
-    }
-    
     return new Promise((resolve) => {
       const tx = db.transaction(STAGE_STORE_NAME, 'readonly');
       const store = tx.objectStore(STAGE_STORE_NAME);
@@ -516,11 +506,6 @@ export const getCurrentStage = async (projectId: string): Promise<string> => {
 export const deleteProjectStage = async (projectId: string): Promise<void> => {
   try {
     const db = await openDB();
-    
-    if (!db.objectStoreNames.contains(STAGE_STORE_NAME)) {
-      return;
-    }
-    
     const tx = db.transaction(STAGE_STORE_NAME, 'readwrite');
     const store = tx.objectStore(STAGE_STORE_NAME);
     await store.delete(projectId);
@@ -528,21 +513,4 @@ export const deleteProjectStage = async (projectId: string): Promise<void> => {
   } catch (error) {
     console.error('[Storage] 删除 stage 失败:', error);
   }
-};
-
-/**
- * 升级数据库，添加 projectStages store
- */
-const upgradeDBForStageStore = async (): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION + 1);
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve();
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STAGE_STORE_NAME)) {
-        db.createObjectStore(STAGE_STORE_NAME, { keyPath: 'projectId' });
-      }
-    };
-  });
 };
