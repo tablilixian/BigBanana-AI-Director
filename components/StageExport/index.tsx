@@ -58,14 +58,26 @@ const StageExport: React.FC<Props> = ({ project }) => {
     const video = videoRef.current;
     if (video && showVideoPlayer) {
       video.currentTime = 0;
-      const playPromise = video.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => setIsPlaying(true))
-          .catch(err => {
-            console.warn('Auto-play failed:', err);
-            setIsPlaying(false);
-          });
+      // 等待视频元数据加载完成后再播放
+      const handleCanPlay = () => {
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => setIsPlaying(true))
+            .catch(err => {
+              console.warn('Auto-play failed:', err);
+              setIsPlaying(false);
+            });
+        }
+      };
+
+      if (video.readyState >= 2) { // HAVE_CURRENT_DATA
+        handleCanPlay();
+      } else {
+        video.addEventListener('canplay', handleCanPlay, { once: true });
+        return () => {
+          video.removeEventListener('canplay', handleCanPlay);
+        };
       }
     }
   }, [currentShotIndex, showVideoPlayer]);

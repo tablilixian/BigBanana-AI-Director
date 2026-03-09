@@ -1,7 +1,8 @@
-import React, { useRef, useEffect } from 'react';
-import { Play, Pause, SkipForward, SkipBack, X } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import { Play, Pause, SkipForward, SkipBack, X, Loader2 } from 'lucide-react';
 import { Shot, ProjectState } from '../../types';
 import { STYLES } from './constants';
+import { getImageUrl } from '../../utils/imageUtils';
 
 interface Props {
   completedShots: Shot[];
@@ -30,6 +31,30 @@ const VideoPlayerModal: React.FC<Props> = ({
 }) => {
   const currentShot = completedShots[currentShotIndex];
   const shotOriginalIndex = project.shots.findIndex(s => s.id === currentShot.id);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const loadVideo = async () => {
+      if (currentShot?.interval?.videoUrl) {
+        setLoading(true);
+        try {
+          const url = await getImageUrl(currentShot.interval.videoUrl);
+          setVideoUrl(url);
+        } catch (err) {
+          console.error('[VideoPlayerModal] 加载视频失败:', err);
+          setVideoUrl(null);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setVideoUrl(null);
+        setLoading(false);
+      }
+    };
+
+    loadVideo();
+  }, [currentShot?.id, currentShot?.interval?.videoUrl]);
 
   return (
     <div className={STYLES.videoModal.overlay}>
@@ -53,20 +78,30 @@ const VideoPlayerModal: React.FC<Props> = ({
 
         {/* Video Player */}
         <div className={STYLES.videoModal.player} style={{ height: '60vh' }}>
-          <video
-            ref={videoRef}
-            key={currentShot.id}
-            src={currentShot.interval?.videoUrl}
-            className="max-w-full max-h-full object-contain"
-            autoPlay
-            controls={false}
-            playsInline
-            onEnded={() => {
-              if (currentShotIndex < completedShots.length - 1) {
-                onShotChange(currentShotIndex + 1);
-              }
-            }}
-          />
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="w-12 h-12 animate-spin text-[var(--accent)]" />
+            </div>
+          ) : videoUrl ? (
+            <video
+              ref={videoRef}
+              key={currentShot.id}
+              src={videoUrl}
+              className="max-w-full max-h-full object-contain"
+              autoPlay
+              controls={false}
+              playsInline
+              onEnded={() => {
+                if (currentShotIndex < completedShots.length - 1) {
+                  onShotChange(currentShotIndex + 1);
+                }
+              }}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
+              <span className="text-sm">视频不可用</span>
+            </div>
+          )}
           
           {/* Play/Pause Overlay Button */}
           <button
