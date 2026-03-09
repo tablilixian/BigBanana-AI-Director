@@ -1,13 +1,7 @@
 import { ProjectState, AssetLibraryItem } from '../types';
+import { DB_NAME, DB_VERSION, STORE_NAMES, storageConfig } from './dbConfig';
 
-const DB_NAME = 'BigBananaDB';
-const DB_VERSION = 5;
-const STORE_NAME = 'projects';
-const ASSET_STORE_NAME = 'assetLibrary';
 const EXPORT_SCHEMA_VERSION = 1;
-
-// 本地存储开关 - 由 hybridStorage 自动启用
-export const storageConfig = { _enabled: true, get enabled() { return this._enabled; }, enableForHybrid() { this._enabled = true; }, setEnabled(v: boolean) { this._enabled = v; } };
 
 export interface IndexedDBExportPayload {
   schemaVersion: number;
@@ -28,20 +22,20 @@ const openDB = (): Promise<IDBDatabase> => {
     request.onsuccess = () => resolve(request.result);
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(STORE_NAMES.PROJECTS)) {
+        db.createObjectStore(STORE_NAMES.PROJECTS, { keyPath: 'id' });
       }
-      if (!db.objectStoreNames.contains(ASSET_STORE_NAME)) {
-        db.createObjectStore(ASSET_STORE_NAME, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(STORE_NAMES.ASSET_LIBRARY)) {
+        db.createObjectStore(STORE_NAMES.ASSET_LIBRARY, { keyPath: 'id' });
       }
       // 兼容性：确保 images store 存在（由 imageStorageService 使用）
-      if (!db.objectStoreNames.contains('images')) {
-        const store = db.createObjectStore('images', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(STORE_NAMES.IMAGES)) {
+        const store = db.createObjectStore(STORE_NAMES.IMAGES, { keyPath: 'id' });
         store.createIndex('createdAt', 'createdAt', { unique: false });
       }
       // Stage 专用存储（避免频繁云端同步）
-      if (!db.objectStoreNames.contains('projectStages')) {
-        db.createObjectStore('projectStages', { keyPath: 'projectId' });
+      if (!db.objectStoreNames.contains(STORE_NAMES.PROJECT_STAGES)) {
+        db.createObjectStore(STORE_NAMES.PROJECT_STAGES, { keyPath: 'projectId' });
       }
     };
   });
@@ -61,9 +55,9 @@ export const exportIndexedDBData = async (): Promise<IndexedDBExportPayload> => 
   const db = await openDB();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction([STORE_NAME, ASSET_STORE_NAME], 'readonly');
-    const projectStore = tx.objectStore(STORE_NAME);
-    const assetStore = tx.objectStore(ASSET_STORE_NAME);
+    const tx = db.transaction([STORE_NAMES.PROJECTS, STORE_NAMES.ASSET_LIBRARY], 'readonly');
+    const projectStore = tx.objectStore(STORE_NAMES.PROJECTS);
+    const assetStore = tx.objectStore(STORE_NAMES.ASSET_LIBRARY);
 
     const projectsRequest = projectStore.getAll();
     const assetsRequest = assetStore.getAll();
@@ -115,9 +109,9 @@ export const importIndexedDBData = async (
   const db = await openDB();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction([STORE_NAME, ASSET_STORE_NAME], 'readwrite');
-    const projectStore = tx.objectStore(STORE_NAME);
-    const assetStore = tx.objectStore(ASSET_STORE_NAME);
+    const tx = db.transaction([STORE_NAMES.PROJECTS, STORE_NAMES.ASSET_LIBRARY], 'readwrite');
+    const projectStore = tx.objectStore(STORE_NAMES.PROJECTS);
+    const assetStore = tx.objectStore(STORE_NAMES.ASSET_LIBRARY);
 
     if (mode === 'replace') {
       projectStore.clear();
@@ -164,8 +158,8 @@ export const saveProjectToDB = async (project: ProjectState): Promise<void> => {
   console.log('[Storage] ✅ IndexedDB 数据库已打开');
   
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.PROJECTS, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.PROJECTS);
     const p = { ...project, lastModified: Date.now() };
     console.log('[Storage] 💾 正在执行 put 操作...');
     const request = store.put(p);
@@ -183,8 +177,8 @@ export const saveProjectToDB = async (project: ProjectState): Promise<void> => {
 export const loadProjectFromDB = async (id: string): Promise<ProjectState> => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const store = tx.objectStore(STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.PROJECTS, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.PROJECTS);
     const request = store.get(id);
     request.onsuccess = () => {
       if (request.result) {
@@ -210,8 +204,8 @@ export const loadProjectFromDB = async (id: string): Promise<ProjectState> => {
         // 如果发生了迁移，异步回写 IndexedDB，避免每次加载都重复执行
         if (migrated) {
           openDB().then(writeDb => {
-            const writeTx = writeDb.transaction(STORE_NAME, 'readwrite');
-            writeTx.objectStore(STORE_NAME).put(project);
+            const writeTx = writeDb.transaction(STORE_NAMES.PROJECTS, 'readwrite');
+            writeTx.objectStore(STORE_NAMES.PROJECTS).put(project);
             console.log(`🔄 项目 "${project.title}" 已迁移废弃的视频模型`);
           }).catch(() => { /* 回写失败不影响运行 */ });
         }
@@ -229,8 +223,8 @@ export const getAllProjectsMetadata = async (): Promise<ProjectState[]> => {
   console.log('[Storage] ✅ 数据库已打开');
   
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const store = tx.objectStore(STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.PROJECTS, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.PROJECTS);
     const request = store.getAll(); 
     
     request.onsuccess = () => {
@@ -256,8 +250,8 @@ export const getAllProjectsMetadata = async (): Promise<ProjectState[]> => {
 export const saveAssetToLibrary = async (item: AssetLibraryItem): Promise<void> => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(ASSET_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(ASSET_STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.ASSET_LIBRARY, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.ASSET_LIBRARY);
     const request = store.put(item);
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
@@ -267,8 +261,8 @@ export const saveAssetToLibrary = async (item: AssetLibraryItem): Promise<void> 
 export const getAllAssetLibraryItems = async (): Promise<AssetLibraryItem[]> => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(ASSET_STORE_NAME, 'readonly');
-    const store = tx.objectStore(ASSET_STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.ASSET_LIBRARY, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.ASSET_LIBRARY);
     const request = store.getAll();
     request.onsuccess = () => {
       const items = (request.result as AssetLibraryItem[]) || [];
@@ -282,8 +276,8 @@ export const getAllAssetLibraryItems = async (): Promise<AssetLibraryItem[]> => 
 export const deleteAssetFromLibrary = async (id: string): Promise<void> => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(ASSET_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(ASSET_STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.ASSET_LIBRARY, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.ASSET_LIBRARY);
     const request = store.delete(id);
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
@@ -322,8 +316,8 @@ export const deleteAssetFromLibrary = async (id: string): Promise<void> => {
   }
   
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.PROJECTS, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.PROJECTS);
     const request = store.delete(id);
     
     request.onsuccess = () => {
@@ -455,8 +449,6 @@ export const createNewProjectState = (): ProjectState => {
 // Stage 专用存储（避免频繁云端同步）
 // ============================================
 
-const STAGE_STORE_NAME = 'projectStages';
-
 /**
  * 保存项目的当前 stage 到单独的 store
  * 这样 stage 变化不会触发完整的项目云端同步
@@ -464,8 +456,8 @@ const STAGE_STORE_NAME = 'projectStages';
 export const saveCurrentStage = async (projectId: string, stage: string): Promise<void> => {
   try {
     const db = await openDB();
-    const tx = db.transaction(STAGE_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STAGE_STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.PROJECT_STAGES, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.PROJECT_STAGES);
     await store.put({ projectId, stage, updatedAt: Date.now() });
     console.log(`[Storage] Stage 已保存: ${projectId} -> ${stage}`);
   } catch (error) {
@@ -481,8 +473,8 @@ export const getCurrentStage = async (projectId: string): Promise<string> => {
   try {
     const db = await openDB();
     return new Promise((resolve) => {
-      const tx = db.transaction(STAGE_STORE_NAME, 'readonly');
-      const store = tx.objectStore(STAGE_STORE_NAME);
+      const tx = db.transaction(STORE_NAMES.PROJECT_STAGES, 'readonly');
+      const store = tx.objectStore(STORE_NAMES.PROJECT_STAGES);
       const request = store.get(projectId);
       request.onsuccess = () => {
         const result = request.result as { projectId: string; stage: string; updatedAt: number } | undefined;
@@ -506,8 +498,8 @@ export const getCurrentStage = async (projectId: string): Promise<string> => {
 export const deleteProjectStage = async (projectId: string): Promise<void> => {
   try {
     const db = await openDB();
-    const tx = db.transaction(STAGE_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STAGE_STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.PROJECT_STAGES, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.PROJECT_STAGES);
     await store.delete(projectId);
     console.log(`[Storage] Stage 已删除: ${projectId}`);
   } catch (error) {

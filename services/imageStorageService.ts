@@ -1,10 +1,6 @@
 import { supabase } from '../src/api/supabase';
 import { useAuthStore } from '../src/stores/authStore';
-
-const DB_NAME = 'BigBananaDB';
-const DB_VERSION = 5;
-const IMAGE_STORE_NAME = 'images';
-const VIDEO_STORE_NAME = 'videos';
+import { DB_NAME, DB_VERSION, STORE_NAMES } from './dbConfig';
 
 export interface LocalImage {
   id: string;
@@ -29,12 +25,12 @@ const openDB = (): Promise<IDBDatabase> => {
     request.onsuccess = () => resolve(request.result);
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(IMAGE_STORE_NAME)) {
-        const store = db.createObjectStore(IMAGE_STORE_NAME, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(STORE_NAMES.IMAGES)) {
+        const store = db.createObjectStore(STORE_NAMES.IMAGES, { keyPath: 'id' });
         store.createIndex('createdAt', 'createdAt', { unique: false });
       }
-      if (!db.objectStoreNames.contains(VIDEO_STORE_NAME)) {
-        const store = db.createObjectStore(VIDEO_STORE_NAME, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(STORE_NAMES.VIDEOS)) {
+        const store = db.createObjectStore(STORE_NAMES.VIDEOS, { keyPath: 'id' });
         store.createIndex('createdAt', 'createdAt', { unique: false });
       }
     };
@@ -46,8 +42,8 @@ export const imageStorageService = {
     console.log('[ImageStorage] 💾 保存图片到本地:', id, '大小:', blob.size);
     
     const db = await openDB();
-    const tx = db.transaction(IMAGE_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(IMAGE_STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.IMAGES, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.IMAGES);
     
     const image: LocalImage = {
       id,
@@ -71,8 +67,8 @@ export const imageStorageService = {
     console.log('[ImageStorage] 📖 读取本地图片:', id);
     
     const db = await openDB();
-    const tx = db.transaction(IMAGE_STORE_NAME, 'readonly');
-    const store = tx.objectStore(IMAGE_STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.IMAGES, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.IMAGES);
     
     return new Promise((resolve, reject) => {
       const request = store.get(id);
@@ -94,8 +90,8 @@ export const imageStorageService = {
     console.log('[ImageStorage] 🗑️ 删除本地图片:', id);
     
     const db = await openDB();
-    const tx = db.transaction(IMAGE_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(IMAGE_STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.IMAGES, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.IMAGES);
     
     return new Promise((resolve, reject) => {
       const request = store.delete(id);
@@ -144,8 +140,8 @@ export const imageStorageService = {
     console.log('[ImageStorage] 🧹 清理过期图片，最大年龄:', maxAge, 'ms');
     
     const db = await openDB();
-    const tx = db.transaction(IMAGE_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(IMAGE_STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.IMAGES, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.IMAGES);
     const index = store.index('createdAt');
     
     const cutoffTime = Date.now() - maxAge;
@@ -174,8 +170,8 @@ export const imageStorageService = {
     console.log('[ImageStorage] 📋 获取所有本地图片');
     
     const db = await openDB();
-    const tx = db.transaction(IMAGE_STORE_NAME, 'readonly');
-    const store = tx.objectStore(IMAGE_STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.IMAGES, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.IMAGES);
     
     return new Promise((resolve, reject) => {
       const request = store.getAll();
@@ -198,8 +194,8 @@ export const videoStorageService = {
     console.log('[VideoStorage] 💾 保存视频到本地:', id, '大小:', blob.size);
     
     const db = await openDB();
-    const tx = db.transaction(VIDEO_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(VIDEO_STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.VIDEOS, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.VIDEOS);
     
     const video: LocalVideo = {
       id,
@@ -223,8 +219,8 @@ export const videoStorageService = {
     console.log('[VideoStorage] 📖 读取本地视频:', id);
     
     const db = await openDB();
-    const tx = db.transaction(VIDEO_STORE_NAME, 'readonly');
-    const store = tx.objectStore(VIDEO_STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.VIDEOS, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.VIDEOS);
     
     return new Promise((resolve, reject) => {
       const request = store.get(id);
@@ -246,8 +242,8 @@ export const videoStorageService = {
     console.log('[VideoStorage] 🗑️ 删除本地视频:', id);
     
     const db = await openDB();
-    const tx = db.transaction(VIDEO_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(VIDEO_STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.VIDEOS, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.VIDEOS);
     
     return new Promise((resolve, reject) => {
       const request = store.delete(id);
@@ -271,8 +267,8 @@ export const videoStorageService = {
     console.log('[VideoStorage] 🧹 清理过期视频，最大年龄:', maxAge, 'ms');
     
     const db = await openDB();
-    const tx = db.transaction(VIDEO_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(VIDEO_STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.VIDEOS, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.VIDEOS);
     const index = store.index('createdAt');
     
     const cutoffTime = Date.now() - maxAge;
@@ -301,8 +297,8 @@ export const videoStorageService = {
     console.log('[VideoStorage] 📋 获取所有本地视频');
     
     const db = await openDB();
-    const tx = db.transaction(VIDEO_STORE_NAME, 'readonly');
-    const store = tx.objectStore(VIDEO_STORE_NAME);
+    const tx = db.transaction(STORE_NAMES.VIDEOS, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.VIDEOS);
     
     return new Promise((resolve, reject) => {
       const request = store.getAll();

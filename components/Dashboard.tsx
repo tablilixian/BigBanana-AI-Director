@@ -10,6 +10,33 @@ import { useAuthStore } from '../src/stores/authStore';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../src/components/LanguageSwitcher';
 import qrCodeImg from '../images/qrcode.jpg';
+import { useImageLoader } from '../hooks/useImageLoader';
+
+const AssetLibraryImage: React.FC<{ imageUrl: string | undefined; alt: string; type: 'character' | 'scene' | 'turnaround' }> = ({ imageUrl, alt, type }) => {
+  const { src, loading } = useImageLoader(imageUrl);
+  
+  if (loading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
+        <Loader2 className="w-5 h-5 animate-spin" />
+      </div>
+    );
+  }
+  
+  if (!src) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
+        {type === 'character' || type === 'turnaround' ? (
+          <Users className="w-8 h-8 opacity-30" />
+        ) : (
+          <MapPin className="w-8 h-8 opacity-30" />
+        )}
+      </div>
+    );
+  }
+  
+  return <img src={src} alt={alt} className="w-full h-full object-cover" />;
+};
 
 interface Props {
   onOpenProject: (projectId: string | ProjectState) => void;
@@ -681,19 +708,7 @@ const Dashboard: React.FC<Props> = ({ onOpenProject, onShowOnboarding, onShowMod
                       className="bg-[var(--bg-primary)] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] transition-colors rounded-xl overflow-hidden"
                     >
                       <div className="aspect-video bg-[var(--bg-elevated)]">
-                        {preview ? (
-                          <img src={preview} alt={item.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
-                            {item.type === 'character' ? (
-                              <Users className="w-8 h-8 opacity-30" />
-                            ) : item.type === 'turnaround' ? (
-                              <Users className="w-8 h-8 opacity-30" />
-                            ) : (
-                              <MapPin className="w-8 h-8 opacity-30" />
-                            )}
-                          </div>
-                        )}
+                        <AssetLibraryImage imageUrl={preview} alt={item.name} type={item.type} />
                       </div>
                       <div className="p-4 space-y-3">
                         <div>

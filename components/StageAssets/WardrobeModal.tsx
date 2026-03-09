@@ -2,7 +2,53 @@ import React, { useState } from 'react';
 import { User, X, Shirt, Plus, RefreshCw, Loader2, Upload, AlertCircle } from 'lucide-react';
 import { Character, CharacterVariation } from '../../types';
 import ImageUploadButton from './ImageUploadButton';
+import { useImageLoader } from '../../hooks/useImageLoader';
 import { generateId } from './utils';
+
+const VariationImage: React.FC<{ imageUrl: string | undefined; name: string; status?: string; onImageClick: (url: string) => void }> = ({ imageUrl, name, status, onImageClick }) => {
+  const { src, loading } = useImageLoader(imageUrl);
+  
+  if (loading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <Loader2 className="w-4 h-4 animate-spin text-[var(--text-muted)]" />
+      </div>
+    );
+  }
+  
+  if (!src) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        {status === 'failed' ? (
+          <AlertCircle className="w-6 h-6 text-[var(--error)]" />
+        ) : (
+          <Shirt className="w-6 h-6 text-[var(--text-muted)]" />
+        )}
+      </div>
+    );
+  }
+  
+  return (
+    <>
+      <img 
+        src={src} 
+        className="w-full h-full object-cover cursor-pointer" 
+        alt={name}
+        onClick={() => imageUrl && onImageClick(imageUrl)}
+      />
+      {status === 'generating' && (
+        <div className="absolute inset-0 bg-[var(--bg-base)]/60 flex items-center justify-center">
+          <Loader2 className="w-4 h-4 text-[var(--text-primary)] animate-spin" />
+        </div>
+      )}
+      {status === 'failed' && (
+        <div className="absolute bottom-0 left-0 right-0 bg-[var(--error-hover-bg-strong)] text-[var(--text-primary)] text-[8px] text-center py-0.5">
+          失败
+        </div>
+      )}
+    </>
+  );
+};
 
 interface WardrobeModalProps {
   character: Character;
@@ -25,6 +71,7 @@ const WardrobeModal: React.FC<WardrobeModalProps> = ({
 }) => {
   const [newVarName, setNewVarName] = useState('');
   const [newVarPrompt, setNewVarPrompt] = useState('');
+  const { src: characterImageSrc } = useImageLoader(character.referenceImage);
 
   const handleAddVariation = () => {
     if (newVarName && newVarPrompt) {
@@ -41,8 +88,8 @@ const WardrobeModal: React.FC<WardrobeModalProps> = ({
         <div className="h-16 px-8 border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 bg-[var(--bg-elevated)]">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-[var(--bg-hover)] overflow-hidden border border-[var(--border-secondary)]">
-              {character.referenceImage && (
-                <img src={character.referenceImage} className="w-full h-full object-cover" alt={character.name} />
+              {characterImageSrc && (
+                <img src={characterImageSrc} className="w-full h-full object-cover" alt={character.name} />
               )}
             </div>
             <div>
@@ -66,10 +113,10 @@ const WardrobeModal: React.FC<WardrobeModalProps> = ({
               <div className="bg-[var(--bg-primary)] p-4 rounded-xl border border-[var(--border-primary)]">
                 <div 
                   className="aspect-video bg-[var(--bg-elevated)] rounded-lg overflow-hidden mb-4 relative cursor-pointer"
-                  onClick={() => character.referenceImage && onImageClick(character.referenceImage)}
+                  onClick={() => characterImageSrc && onImageClick(characterImageSrc)}
                 >
-                  {character.referenceImage ? (
-                    <img src={character.referenceImage} className="w-full h-full object-cover" alt="Base" />
+                  {characterImageSrc ? (
+                    <img src={characterImageSrc} className="w-full h-full object-cover" alt="Base" />
                   ) : (
                     <div className="flex items-center justify-center h-full text-[var(--text-muted)]">No Image</div>
                   )}
@@ -97,32 +144,12 @@ const WardrobeModal: React.FC<WardrobeModalProps> = ({
                     className="flex gap-4 p-4 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl group hover:border-[var(--border-secondary)] transition-colors"
                   >
                     <div className="w-20 h-24 bg-[var(--bg-elevated)] rounded-lg flex-shrink-0 overflow-hidden relative border border-[var(--border-primary)]">
-                      {variation.referenceImage ? (
-                        <img 
-                          src={variation.referenceImage} 
-                          className="w-full h-full object-cover cursor-pointer" 
-                          alt={variation.name}
-                          onClick={() => onImageClick(variation.referenceImage!)}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          {variation.status === 'failed' ? (
-                            <AlertCircle className="w-6 h-6 text-[var(--error)]" />
-                          ) : (
-                            <Shirt className="w-6 h-6 text-[var(--text-muted)]" />
-                          )}
-                        </div>
-                      )}
-                      {variation.status === 'generating' && (
-                        <div className="absolute inset-0 bg-[var(--bg-base)]/60 flex items-center justify-center">
-                          <Loader2 className="w-4 h-4 text-[var(--text-primary)] animate-spin" />
-                        </div>
-                      )}
-                      {variation.status === 'failed' && !variation.referenceImage && (
-                        <div className="absolute bottom-0 left-0 right-0 bg-[var(--error-hover-bg-strong)] text-[var(--text-primary)] text-[8px] text-center py-0.5">
-                          失败
-                        </div>
-                      )}
+                      <VariationImage 
+                        imageUrl={variation.referenceImage} 
+                        name={variation.name} 
+                        status={variation.status}
+                        onImageClick={onImageClick}
+                      />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start mb-2">

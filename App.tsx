@@ -46,7 +46,8 @@ function App() {
 
   const computeProjectHash = (project: ProjectState | null): string => {
     if (!project) return '';
-    const projectString = JSON.stringify(project);
+    const { stage, ...projectWithoutStage } = project;
+    const projectString = JSON.stringify(projectWithoutStage);
     let hash = 0;
     for (let i = 0; i < projectString.length; i++) {
       const char = projectString.charCodeAt(i);

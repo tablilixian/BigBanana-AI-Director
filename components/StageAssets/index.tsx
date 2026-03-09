@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Sparkles, RefreshCw, Loader2, MapPin, Archive, X, Search, Trash2, Package } from 'lucide-react';
-import { ProjectState, CharacterVariation, Character, Scene, Prop, AspectRatio, AssetLibraryItem, CharacterTurnaroundPanel } from '../../types';
+import { ProjectState, CharacterVariation, Character, Scene, Prop, AspectRatio, AssetLibraryItem, AssetLibraryItemType, CharacterTurnaroundPanel } from '../../types';
 import { 
   generateImage, 
   generateCharacterVisualPrompt, 
@@ -28,6 +28,7 @@ import PropCard from './PropCard';
 import WardrobeModal from './WardrobeModal';
 import TurnaroundModal from './TurnaroundModal';
 import { useAlert } from '../GlobalAlert';
+import { useImageLoader } from '../../hooks/useImageLoader';
 import { getAllAssetLibraryItems, deleteAssetFromLibrary } from '../../services/storageService';
 import { applyLibraryItemToProject, createLibraryItemFromCharacter, createLibraryItemFromScene, createLibraryItemFromProp, createLibraryItemFromTurnaround, cloneCharacterForProject } from '../../services/assetLibraryService';
 import { hybridStorage } from '../../services/hybridStorageService';
@@ -41,6 +42,34 @@ interface Props {
   onApiKeyError?: (error: any) => boolean;
   onGeneratingChange?: (isGenerating: boolean) => void;
 }
+  
+const AssetLibraryImage: React.FC<{ imageUrl: string | undefined; alt: string; type: AssetLibraryItemType }> = ({ imageUrl, alt, type }) => {
+  const { src, loading } = useImageLoader(imageUrl);
+  
+  if (loading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
+        <Loader2 className="w-5 h-5 animate-spin" />
+      </div>
+    );
+  }
+  
+  if (!src) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
+        {type === 'character' || type === 'turnaround' ? (
+          <Users className="w-8 h-8 opacity-30" />
+        ) : type === 'scene' ? (
+          <MapPin className="w-8 h-8 opacity-30" />
+        ) : (
+          <Package className="w-8 h-8 opacity-30" />
+        )}
+      </div>
+    );
+  }
+  
+  return <img src={src} alt={alt} className="w-full h-full object-cover" />;
+};
 
 const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, onGeneratingChange }) => {
   const { showAlert } = useAlert();
@@ -1493,21 +1522,7 @@ const StageAssets: React.FC<Props> = ({ project, updateProject, onApiKeyError, o
                         className="bg-[var(--bg-deep)] border border-[var(--border-primary)] rounded-xl overflow-hidden hover:border-[var(--border-secondary)] transition-colors"
                       >
                         <div className="aspect-video bg-[var(--bg-elevated)] relative">
-                          {preview ? (
-                            <img src={preview} alt={item.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
-                              {item.type === 'character' ? (
-                                <Users className="w-8 h-8 opacity-30" />
-                              ) : item.type === 'turnaround' ? (
-                                <Users className="w-8 h-8 opacity-30" />
-                              ) : item.type === 'scene' ? (
-                                <MapPin className="w-8 h-8 opacity-30" />
-                              ) : (
-                                <Package className="w-8 h-8 opacity-30" />
-                              )}
-                            </div>
-                          )}
+                          <AssetLibraryImage imageUrl={preview} alt={item.name} type={item.type} />
                         </div>
                         <div className="p-4 space-y-3">
                           <div>

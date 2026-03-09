@@ -100,8 +100,6 @@ const SceneContext: React.FC<SceneContextProps> = ({
         <div className="w-28 h-20 bg-[var(--bg-elevated)] rounded-lg overflow-hidden flex-shrink-0 border border-[var(--border-secondary)] relative">
           {sceneImageUrl ? (
             <img src={sceneImageUrl} className="w-full h-full object-cover" alt={scene?.location} />
-          ) : scene?.referenceImage ? (
-            <img src={scene.referenceImage} className="w-full h-full object-cover" alt={scene.location} />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-[var(--bg-hover)]">
               <MapPin className="w-6 h-6 text-[var(--text-muted)]" />
@@ -168,8 +166,6 @@ const SceneContext: React.FC<SceneContextProps> = ({
                     <div className="w-6 h-6 rounded-full bg-[var(--border-secondary)] overflow-hidden flex-shrink-0">
                       {characterImageUrls[char.id] ? (
                         <img src={characterImageUrls[char.id]} className="w-full h-full object-cover" alt={char.name} />
-                      ) : char.referenceImage ? (
-                        <img src={char.referenceImage} className="w-full h-full object-cover" alt={char.name} />
                       ) : null}
                     </div>
                     <span className="text-[11px] text-[var(--text-secondary)] font-medium">{char.name}</span>
@@ -239,8 +235,6 @@ const SceneContext: React.FC<SceneContextProps> = ({
                     <div className="w-6 h-6 rounded bg-[var(--border-secondary)] overflow-hidden flex-shrink-0">
                       {propImageUrls[prop.id] ? (
                         <img src={propImageUrls[prop.id]} className="w-full h-full object-cover" alt={prop.name} />
-                      ) : prop.referenceImage ? (
-                        <img src={prop.referenceImage} className="w-full h-full object-cover" alt={prop.name} />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <Package className="w-3 h-3 text-[var(--text-muted)]" />

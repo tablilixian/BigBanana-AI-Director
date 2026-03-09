@@ -6,6 +6,7 @@ import { getDefaultVideoPrompt } from './utils';
 import CollapsibleSection from './CollapsibleSection';
 import PromptEditor from './PromptEditor';
 import StatusBadge from './StatusBadge';
+import { useImageLoader } from '../../hooks/useImageLoader';
 
 interface Props {
   shots: Shot[];
@@ -100,13 +101,7 @@ const KeyframeSection: React.FC<Props> = ({
                   )}
 
                   {keyframe.imageUrl && (
-                    <div className="mt-2 rounded overflow-hidden border border-[var(--border-primary)]">
-                      <img 
-                        src={keyframe.imageUrl} 
-                        alt={`关键帧 ${keyframe.type}`}
-                        className="w-full h-auto"
-                      />
-                    </div>
+                    <KeyframeImage imageUrl={keyframe.imageUrl} type={keyframe.type} />
                   )}
                 </div>
               ))}
@@ -164,6 +159,32 @@ const KeyframeSection: React.FC<Props> = ({
         );
       })}
     </CollapsibleSection>
+  );
+};
+
+const KeyframeImage: React.FC<{ imageUrl: string; type: 'start' | 'end' }> = ({ imageUrl, type }) => {
+  const { src, loading } = useImageLoader(imageUrl);
+  
+  if (loading) {
+    return (
+      <div className="mt-2 rounded overflow-hidden border border-[var(--border-primary)] aspect-video flex items-center justify-center">
+        <div className="text-[var(--text-muted)]">加载中...</div>
+      </div>
+    );
+  }
+  
+  if (!src) {
+    return null;
+  }
+  
+  return (
+    <div className="mt-2 rounded overflow-hidden border border-[var(--border-primary)]">
+      <img 
+        src={src} 
+        alt={`关键帧 ${type}`}
+        className="w-full h-auto"
+      />
+    </div>
   );
 };
 
